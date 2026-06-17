@@ -65,7 +65,7 @@ export function ScenarioPage() {
         <div className="flex h-48 items-center justify-center rounded-md border border-border bg-surface">
           <div className="flex flex-col items-center gap-2 text-center">
             <p className="text-muted-foreground">No scenarios yet.</p>
-            <Button variant="outline" size="sm" onClick={openCreate}>
+            <Button variant="secondary" size="sm" onClick={openCreate}>
               Create your first scenario
             </Button>
           </div>
@@ -101,7 +101,7 @@ export function ScenarioPage() {
 
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setView({ kind: 'compare', scenarioId: s.id })}
                 >
@@ -136,11 +136,11 @@ export function ScenarioPage() {
           description={`Delete "${deleteTarget?.name}"? This cannot be undone.`}
           footer={
             <>
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
                 Cancel
               </Button>
               <Button
-                variant="destructive"
+                variant="danger"
                 onClick={confirmDelete}
                 disabled={deleteMutation.isPending}
               >

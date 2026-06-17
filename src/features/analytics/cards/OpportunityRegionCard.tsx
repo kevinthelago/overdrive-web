@@ -1,6 +1,6 @@
 import { useAnalyticsOpportunityByRegion } from '../api';
 import type { AnalyticsParams } from '../types';
-import Choropleth from '@/components/charts/Choropleth';
+import { Choropleth } from '@/components/charts/Choropleth';
 
 interface Props {
   params: AnalyticsParams;

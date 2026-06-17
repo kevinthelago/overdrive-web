@@ -1,6 +1,6 @@
 import { useAnalyticsCostBreakdown } from '../api';
 import type { AnalyticsParams } from '../types';
-import StackedBar from '@/components/charts/StackedBar';
+import { StackedBar } from '@/components/charts/StackedBar';
 import { COST_COLORS } from '@/styles/costColors';
 
 interface Props {
@@ -23,10 +23,15 @@ export function CostBreakdownCard({ params }: Props) {
       )}
       {!isLoading && data && data.components.length > 0 && (
         <StackedBar
-          data={data.components.map((c, i) => ({
+          series={data.components.map((c, i) => ({
+            key: c.component,
             label: c.component,
-            segments: [{ value: c.mean, color: COST_COLORS[i % COST_COLORS.length] }],
+            color: COST_COLORS[i % COST_COLORS.length],
           }))}
+          data={[{
+            category: 'Average Cost',
+            values: Object.fromEntries(data.components.map((c) => [c.component, c.mean])),
+          }]}
         />
       )}
     </div>

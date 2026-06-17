@@ -105,12 +105,6 @@ function computeLayout(
     const tgt = nodeById.get(l.target);
     if (!src || !tgt) return;
 
-    const totalValue = Math.max(
-      1,
-      layoutNodes
-        .filter((n) => n.id === src.id || n.id === tgt.id)
-        .reduce((s, n) => s + n.totalValue, 0) / 2,
-    );
     const srcH = src.y1 - src.y0;
     const tgtH = tgt.y1 - tgt.y0;
     const srcScale = srcH / Math.max(1, src.totalValue);

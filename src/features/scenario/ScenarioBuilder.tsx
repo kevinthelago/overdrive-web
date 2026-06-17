@@ -140,7 +140,7 @@ export function ScenarioBuilder({ scenarioId, open, onClose }: Props) {
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm text-foreground">Overrides</span>
-              <Button variant="outline" size="sm" onClick={addOverride}>
+              <Button variant="secondary" size="sm" onClick={addOverride}>
                 + Add Override
               </Button>
             </div>
