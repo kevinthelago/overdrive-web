@@ -21,7 +21,7 @@ export function AxisLeft({
   useEffect(() => {
     if (!ref.current) return
     const axis = d3.axisLeft(scale).ticks(tickCount)
-    if (tickFormat) axis.tickFormat(tickFormat as unknown as (d: d3.AxisDomain, i: number) => string)
+    if (tickFormat) axis.tickFormat((d, _i) => tickFormat(d))
     d3.select(ref.current)
       .call(axis)
       .call((g) => g.select('.domain').remove())
