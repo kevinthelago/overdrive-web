@@ -1,85 +1,48 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { RouteList } from '../RouteList'
-import type { Route } from '../types'
+import { RoutingInputs } from '../RoutingInputs'
+import * as appStore from '@/state/appStore'
 
-function makeRoute(id: string, overrides: Partial<Route> = {}): Route {
-  return {
-    id,
-    origin: 'LAX',
-    destination: 'JFK',
-    carrier: { scac: 'FEDX', name: 'FedEx', mode: 'Parcel' },
-    serviceLevel: 'Ground',
-    transitDays: 5,
-    cost: {
-      lineHaul: 10000,
-      fuelSurcharge: 1000,
-      residentialDelivery: 0,
-      deliveryAreaSurcharge: 0,
-      dimensionalWeight: 0,
-      signatureRequired: 0,
-      otherAccessorials: 0,
-    },
-    ratedAt: '2026-06-17T00:00:00Z',
-    isCurrent: false,
-    ...overrides,
-  }
+vi.mock('@/state/appStore', () => ({
+  useAppStore: vi.fn(),
+}))
+
+const defaultStore = {
+  selectedProductId: 'prod-1',
+  destinationZip: '90210',
+  setDestinationZip: vi.fn(),
 }
 
-const current = makeRoute('current', { isCurrent: true, carrier: { scac: 'FEDX', name: 'FedEx', mode: 'Parcel' } })
-const ltlRoute = makeRoute('ltl', { carrier: { scac: 'RDWY', name: 'Old Dominion', mode: 'LTL' } })
-const fastRoute = makeRoute('fast', { transitDays: 1, carrier: { scac: 'UPSG', name: 'UPS', mode: 'Parcel' } })
-
-describe('RouteList', () => {
-  const defaults = {
-    routes: [current, ltlRoute, fastRoute],
-    currentRoute: current,
-    selectedRouteId: null,
-    onSelect: vi.fn(),
-    filter: {},
-    onFilterChange: vi.fn(),
-  }
-
-  it('renders all routes', () => {
-    render(<RouteList {...defaults} />)
-    expect(screen.getByText('FedEx')).toBeInTheDocument()
-    expect(screen.getByText('Old Dominion')).toBeInTheDocument()
-    expect(screen.getByText('UPS')).toBeInTheDocument()
+describe('RoutingInputs', () => {
+  beforeEach(() => {
+    vi.mocked(appStore.useAppStore).mockReturnValue(defaultStore as any)
   })
 
-  it('shows route count', () => {
-    render(<RouteList {...defaults} />)
-    expect(screen.getByText(/3 routes/)).toBeInTheDocument()
+  it('renders service level controls', () => {
+    render(<RoutingInputs onSolve={vi.fn()} loading={false} />)
+    expect(screen.getByText('Ground')).toBeInTheDocument()
+    expect(screen.getByText('Express')).toBeInTheDocument()
+    expect(screen.getByText('Priority')).toBeInTheDocument()
   })
 
-  it('calls onSelect with route id when a card is clicked', () => {
-    const onSelect = vi.fn()
-    render(<RouteList {...defaults} onSelect={onSelect} />)
-    const buttons = screen.getAllByRole('button')
-    // find the LTL route button
-    const ltlButton = buttons.find((b) => b.textContent?.includes('Old Dominion'))!
-    fireEvent.click(ltlButton)
-    expect(onSelect).toHaveBeenCalledWith('ltl')
+  it('calls onSolve with defaults when Solve is clicked', () => {
+    const onSolve = vi.fn()
+    render(<RoutingInputs onSolve={onSolve} loading={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /solve/i }))
+    expect(onSolve).toHaveBeenCalledWith('GROUND', 1)
   })
 
-  it('filters by mode when a mode chip is clicked', () => {
-    const onFilterChange = vi.fn()
-    render(<RouteList {...defaults} onFilterChange={onFilterChange} />)
-    // Click the LTL mode chip (filter chips are button elements in the filter row)
-    const ltlChip = screen.getAllByRole('button').find(
-      (b) => b.textContent?.trim() === 'LTL' && b.className.includes('rounded-full'),
-    )!
-    fireEvent.click(ltlChip)
-    expect(onFilterChange).toHaveBeenCalled()
+  it('disables Solve when no productId', () => {
+    vi.mocked(appStore.useAppStore).mockReturnValue({
+      ...defaultStore,
+      selectedProductId: null,
+    } as any)
+    render(<RoutingInputs onSolve={vi.fn()} loading={false} />)
+    expect(screen.getByRole('button', { name: /solve/i })).toBeDisabled()
   })
 
-  it('shows no-results message when filter matches nothing', () => {
-    render(
-      <RouteList
-        {...defaults}
-        filter={{ mode: ['Rail'] }} // no rail routes
-      />,
-    )
-    expect(screen.getByText(/No routes match/)).toBeInTheDocument()
+  it('disables Solve when loading', () => {
+    render(<RoutingInputs onSolve={vi.fn()} loading />)
+    expect(screen.getByRole('button', { name: /solve/i })).toBeDisabled()
   })
 })

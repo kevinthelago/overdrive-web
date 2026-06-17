@@ -3,7 +3,19 @@ export { AxisBottom } from './AxisBottom'
 export { AxisLeft } from './AxisLeft'
 export { Tooltip, useTooltip } from './Tooltip'
 export { useChartDimensions } from './useChartDimensions'
-export { CHART_COLORS, colorForIndex, POSITIVE_COLOR, NEGATIVE_COLOR, NEUTRAL_COLOR, CONNECTOR_COLOR } from './chartColors'
+export {
+  CHART_COLORS,
+  COST_COLORS,
+  COST_BREAKDOWN_KEYS,
+  COST_KEY_LABELS,
+  COST_KEY_COLOR,
+  colorForIndex,
+  POSITIVE_COLOR,
+  NEGATIVE_COLOR,
+  NEUTRAL_COLOR,
+  CONNECTOR_COLOR,
+} from './chartColors'
+export type { CostBreakdownKey } from './chartColors'
 export { formatUsd, formatUsdCents, formatPct, formatCompactUsd } from './formatters'
 export type { Margin, Dimensions, ChartDataPoint, StackedDataPoint, AccessorFn } from './types'
 export { DEFAULT_MARGIN } from './types'

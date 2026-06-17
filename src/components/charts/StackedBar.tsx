@@ -1,122 +1,121 @@
-import { useRef } from 'react'
 import * as d3 from 'd3'
 import {
   ChartContainer,
   AxisBottom,
   AxisLeft,
-  Tooltip,
   useTooltip,
-  colorForIndex,
+  Tooltip,
+  COST_KEY_COLOR,
+  COST_KEY_LABELS,
+  COST_BREAKDOWN_KEYS,
   formatCompactUsd,
-  formatUsd,
 } from './core'
+import type { CostBreakdownKey } from './core'
+import type { CostBreakdown, Money } from '@/lib/api/types'
 
-export interface StackedBarSeries {
-  /** Unique segment key (e.g. "lineHaul", "fuelSurcharge") */
-  key: string
-  /** Human-readable display name */
-  label: string
-}
+// ── Public types ─────────────────────────────────────────────────────────────
 
 export interface StackedBarDatum {
-  /** X-axis label (e.g. route name or carrier) */
   category: string
-  /** Segment values keyed by series.key */
-  values: Record<string, number>
+  breakdown: CostBreakdown
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function costValues(bd: CostBreakdown): Record<string, number> {
+  return Object.fromEntries(
+    COST_BREAKDOWN_KEYS.map((k) => [k, (bd[k] as Money).amount]),
+  )
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 interface StackedBarProps {
-  series: StackedBarSeries[]
   data: StackedBarDatum[]
   height?: number
-  yLabel?: string
   className?: string
-  /** Show legend below chart */
   showLegend?: boolean
 }
 
 /**
- * Stacked bar chart for comparing cost-component breakdowns across
- * multiple routes, carriers, or scenarios.
+ * Stacked bar chart comparing cost-component breakdowns across candidates.
+ * Segment colors match the 7-component cost color ramp from design tokens.
  */
-export function StackedBar({
-  series,
-  data,
-  height = 300,
-  yLabel = 'Cost (USD)',
-  className,
-  showLegend = true,
-}: StackedBarProps) {
-  const svgRef = useRef<SVGSVGElement>(null)
+export function StackedBar({ data, height = 280, className, showLegend = true }: StackedBarProps) {
   const { tooltip, show, hide } = useTooltip()
 
-  const keys = series.map((s) => s.key)
+  const flat = data.map((d) => ({ category: d.category, values: costValues(d.breakdown) }))
 
-  const stackGen = d3.stack<StackedBarDatum>().keys(keys).value((d, k) => d.values[k] ?? 0)
+  const stackGen = d3
+    .stack<(typeof flat)[number]>()
+    .keys([...COST_BREAKDOWN_KEYS])
+    .value((d, k) => d.values[k] ?? 0)
 
-  const stacked = stackGen(data)
+  const stacked = stackGen(flat)
 
-  const yMax = d3.max(data, (d) => keys.reduce((sum, k) => sum + (d.values[k] ?? 0), 0)) ?? 0
+  const yMax =
+    d3.max(flat, (d) =>
+      COST_BREAKDOWN_KEYS.reduce((sum, k) => sum + (d.values[k] ?? 0), 0),
+    ) ?? 0
 
   return (
     <div className={className}>
       <ChartContainer
         height={height}
-        margin={{ top: 20, right: 16, bottom: 48, left: 70 }}
+        margin={{ top: 16, right: 12, bottom: 48, left: 64 }}
       >
         {(_w, _h, bw, bh) => {
           const xScale = d3
             .scaleBand()
-            .domain(data.map((d) => d.category))
+            .domain(flat.map((d) => d.category))
             .range([0, bw])
             .padding(0.2)
 
           const yScale = d3
             .scaleLinear()
-            .domain([0, yMax * 1.08])
+            .domain([0, yMax * 1.1])
             .nice()
             .range([bh, 0])
 
           return (
             <>
               <AxisLeft
-                scale={yScale}
-                tickCount={6}
+                scale={yScale as d3.AxisScale<d3.AxisDomain>}
+                tickCount={5}
                 tickFormat={(d) => formatCompactUsd(d as number)}
-                label={yLabel}
                 height={bh}
               />
-              <AxisBottom scale={xScale} height={bh} width={bw} />
+              <AxisBottom scale={xScale as d3.AxisScale<d3.AxisDomain>} height={bh} width={bw} />
 
-              {stacked.map((layer, si) => {
-                const fill = colorForIndex(si)
-                const seriesLabel = series[si]?.label ?? layer.key
+              {stacked.map((layer) => {
+                const key = layer.key as CostBreakdownKey
+                const fill = COST_KEY_COLOR[key] ?? '#64748b'
+                const label = COST_KEY_LABELS[key] ?? key
+
                 return layer.map((d, di) => {
                   const x = xScale(d.data.category) ?? 0
                   const y0 = yScale(d[1])
                   const y1 = yScale(d[0])
                   const segH = Math.max(y1 - y0, 0)
                   const value = d[1] - d[0]
+
                   return (
                     <rect
                       key={`${layer.key}-${di}`}
-                      x={x}
-                      y={y0}
-                      width={xScale.bandwidth()}
-                      height={segH}
-                      fill={fill}
-                      fillOpacity={0.85}
-                      style={{ cursor: 'pointer' }}
+                      x={x} y={y0}
+                      width={xScale.bandwidth()} height={segH}
+                      fill={fill} fillOpacity={0.9}
+                      style={{ cursor: 'default' }}
                       onMouseEnter={(e) => {
-                        const el = (e.target as SVGElement).ownerSVGElement
-                        const rect = el?.getBoundingClientRect()
+                        const svg = (e.target as SVGElement).ownerSVGElement
+                        const r = svg?.getBoundingClientRect()
                         show(
-                          e.clientX - (rect?.left ?? 0),
-                          e.clientY - (rect?.top ?? 0),
+                          e.clientX - (r?.left ?? 0),
+                          e.clientY - (r?.top ?? 0),
                           <span>
-                            <strong className="block">{d.data.category}</strong>
-                            <span className="text-gray-500">{seriesLabel}: </span>
-                            {formatUsd(value)}
+                            <strong className="block text-text-primary">{d.data.category}</strong>
+                            <span className="text-text-secondary">{label}: </span>
+                            <span className="font-mono">{formatCompactUsd(value)}</span>
                           </span>,
                         )
                       }}
@@ -131,20 +130,20 @@ export function StackedBar({
       </ChartContainer>
 
       {showLegend && (
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 px-[70px] text-xs text-gray-600">
-          {series.map((s, i) => (
-            <span key={s.key} className="flex items-center gap-1">
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 px-16 text-xs text-text-secondary">
+          {COST_BREAKDOWN_KEYS.map((key) => (
+            <span key={key} className="flex items-center gap-1.5">
               <span
-                className="inline-block h-2.5 w-2.5 rounded-sm"
-                style={{ background: colorForIndex(i) }}
+                className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                style={{ background: COST_KEY_COLOR[key] }}
               />
-              {s.label}
+              {COST_KEY_LABELS[key]}
             </span>
           ))}
         </div>
       )}
 
-      <Tooltip state={tooltip} containerRef={svgRef} />
+      <Tooltip state={tooltip} containerRef={{ current: null }} />
     </div>
   )
 }

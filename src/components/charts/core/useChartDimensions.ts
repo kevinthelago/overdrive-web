@@ -4,7 +4,7 @@ import { DEFAULT_MARGIN } from './types'
 
 export function useChartDimensions(
   margin: Margin = DEFAULT_MARGIN,
-): [React.RefObject<HTMLDivElement | null>, Dimensions] {
+): [React.RefObject<HTMLDivElement>, Dimensions] {
   const ref = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState<Dimensions>({
     width: 0,

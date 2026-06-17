@@ -1,65 +1,78 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { RouteCard } from '../RouteCard'
-import type { Route } from '../types'
+import { CandidateTable } from '../CandidateTable'
+import type { SolvedCandidate } from '../types'
 
-const makeRoute = (overrides: Partial<Route> = {}): Route => ({
-  id: 'r1',
-  origin: 'LAX',
-  destination: 'JFK',
-  carrier: { scac: 'FEDX', name: 'FedEx', mode: 'Parcel' },
-  serviceLevel: 'Ground',
-  transitDays: 5,
-  cost: {
-    lineHaul: 8500,
-    fuelSurcharge: 1200,
-    residentialDelivery: 400,
-    deliveryAreaSurcharge: 0,
-    dimensionalWeight: 0,
-    signatureRequired: 0,
-    otherAccessorials: 0,
-  },
-  ratedAt: '2026-06-17T00:00:00Z',
-  isCurrent: false,
-  ...overrides,
-})
+function money(amount: number) {
+  return { amount, currency: 'USD' }
+}
 
-describe('RouteCard', () => {
-  it('renders carrier name', () => {
-    render(<RouteCard route={makeRoute()} />)
+function makeCost(base: number) {
+  return {
+    baseRate: money(base),
+    fuelSurcharge: money(base * 0.1),
+    residentialSurcharge: money(0),
+    accessorialFees: money(0),
+    peakSurcharge: money(0),
+    deliveryAreaSurcharge: money(0),
+    other: money(0),
+    total: money(base * 1.1),
+  }
+}
+
+function makeCandidate(overrides: Partial<SolvedCandidate> = {}): SolvedCandidate {
+  return {
+    carrierId: 'fedx',
+    carrierName: 'FedEx',
+    serviceLevel: 'GROUND',
+    transitDays: 5,
+    cost: makeCost(100),
+    factors: [],
+    deltaCost: money(-20),
+    infeasible: false,
+    ...overrides,
+  }
+}
+
+describe('CandidateTable', () => {
+  it('renders candidate rows', () => {
+    const candidates = [
+      makeCandidate({ carrierId: 'fedx', carrierName: 'FedEx' }),
+      makeCandidate({ carrierId: 'ups', carrierName: 'UPS', serviceLevel: 'EXPRESS' }),
+    ]
+    render(<CandidateTable candidates={candidates} />)
     expect(screen.getByText('FedEx')).toBeInTheDocument()
+    expect(screen.getByText('UPS')).toBeInTheDocument()
   })
 
-  it('renders service level', () => {
-    render(<RouteCard route={makeRoute()} />)
-    expect(screen.getByText('Ground')).toBeInTheDocument()
+  it('shows BEST pill on winner row', () => {
+    const candidates = [makeCandidate()]
+    render(<CandidateTable candidates={candidates} winnerId="fedx-GROUND" />)
+    expect(screen.getByText('BEST')).toBeInTheDocument()
   })
 
-  it('shows transit days', () => {
-    render(<RouteCard route={makeRoute({ transitDays: 3 })} />)
-    expect(screen.getByText(/3 days/)).toBeInTheDocument()
+  it('shows N/A pill on infeasible row', () => {
+    const candidates = [makeCandidate({ infeasible: true })]
+    render(<CandidateTable candidates={candidates} />)
+    expect(screen.getByText('N/A')).toBeInTheDocument()
   })
 
-  it('shows "Current" badge when isCurrent', () => {
-    render(<RouteCard route={makeRoute({ isCurrent: true })} isCurrent />)
-    expect(screen.getByText('Current')).toBeInTheDocument()
+  it('expands row on click to show breakdown', () => {
+    const candidates = [makeCandidate()]
+    render(<CandidateTable candidates={candidates} />)
+    const row = screen.getByText('FedEx').closest('tr')!
+    fireEvent.click(row)
+    // After expand, base rate label appears in breakdown
+    expect(screen.getByText('Base Rate:')).toBeInTheDocument()
   })
 
-  it('shows savings when currentCost is provided and route is cheaper', () => {
-    const route = makeRoute() // total = 8500 + 1200 + 400 = 10100 cents
-    render(<RouteCard route={route} currentCost={15000} />)
-    expect(screen.getByText(/Save/)).toBeInTheDocument()
-  })
-
-  it('calls onSelect when clicked', () => {
-    const onSelect = vi.fn()
-    render(<RouteCard route={makeRoute()} onSelect={onSelect} />)
-    fireEvent.click(screen.getByRole('button'))
-    expect(onSelect).toHaveBeenCalledOnce()
-  })
-
-  it('marks button as aria-pressed when selected', () => {
-    render(<RouteCard route={makeRoute()} isSelected />)
-    expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'true')
+  it('collapses row on second click', () => {
+    const candidates = [makeCandidate()]
+    render(<CandidateTable candidates={candidates} />)
+    const row = screen.getByText('FedEx').closest('tr')!
+    fireEvent.click(row)
+    expect(screen.getByText('Base Rate:')).toBeInTheDocument()
+    fireEvent.click(row)
+    expect(screen.queryByText('Base Rate:')).not.toBeInTheDocument()
   })
 })

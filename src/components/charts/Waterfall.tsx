@@ -1,94 +1,113 @@
-import { useRef } from 'react'
 import * as d3 from 'd3'
 import {
   ChartContainer,
   AxisBottom,
   AxisLeft,
-  Tooltip,
   useTooltip,
+  Tooltip,
   POSITIVE_COLOR,
   NEGATIVE_COLOR,
   NEUTRAL_COLOR,
   CONNECTOR_COLOR,
+  COST_KEY_COLOR,
+  COST_KEY_LABELS,
+  COST_BREAKDOWN_KEYS,
   formatCompactUsd,
-  formatUsd,
 } from './core'
+import type { CostBreakdownKey } from './core'
+import type { CostBreakdown, Money } from '@/lib/api/types'
+
+// ── Public types ─────────────────────────────────────────────────────────────
 
 export interface WaterfallStep {
-  /** Display label for this bar */
+  key: CostBreakdownKey | 'total'
   label: string
-  /** Absolute dollar amount for total bars; signed delta for intermediate bars */
   value: number
-  /**
-   * 'total'  — renders a full bar from zero (e.g. start / end totals)
-   * 'delta'  — renders a floating bar showing a change from the previous running total
-   */
   kind: 'total' | 'delta'
 }
 
-interface Bar {
-  label: string
+interface Bar extends WaterfallStep {
   start: number
   end: number
-  kind: 'total' | 'delta'
 }
 
-interface WaterfallProps {
-  steps: WaterfallStep[]
-  height?: number
-  /** Optional currency label for y-axis */
-  currencyLabel?: string
-  className?: string
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Convert a CostBreakdown (with Money values) into ordered waterfall steps */
+export function breakdownToSteps(breakdown: CostBreakdown): WaterfallStep[] {
+  const steps: WaterfallStep[] = []
+  let running = 0
+
+  for (const key of COST_BREAKDOWN_KEYS) {
+    const val = (breakdown[key] as Money).amount
+    if (val === 0) continue
+    if (steps.length === 0) {
+      steps.push({ key, label: COST_KEY_LABELS[key], value: val, kind: 'total' })
+    } else {
+      steps.push({ key, label: COST_KEY_LABELS[key], value: val, kind: 'delta' })
+    }
+    running += val
+  }
+
+  steps.push({ key: 'total', label: 'Total', value: running, kind: 'total' })
+  return steps
 }
 
 function buildBars(steps: WaterfallStep[]): Bar[] {
   let running = 0
   return steps.map((step) => {
     if (step.kind === 'total') {
-      const bar: Bar = { label: step.label, start: 0, end: step.value, kind: 'total' }
+      const bar: Bar = { ...step, start: 0, end: step.value }
       running = step.value
       return bar
     }
     const start = running
     const end = running + step.value
     running = end
-    return { label: step.label, start, end, kind: 'delta' }
+    return { ...step, start, end }
   })
 }
 
-/**
- * Waterfall chart for visualising how cost components add up to a total.
- * Suitable for freight cost build-ups and route opportunity comparisons.
- */
-export function Waterfall({
-  steps,
-  height = 280,
-  currencyLabel = 'Cost (USD)',
-  className,
-}: WaterfallProps) {
-  const svgRef = useRef<SVGSVGElement>(null)
-  const { tooltip, show, hide } = useTooltip()
+function barFill(bar: Bar): string {
+  if (bar.kind === 'total') return NEUTRAL_COLOR
+  const key = bar.key as CostBreakdownKey
+  return COST_KEY_COLOR[key] ?? (bar.end - bar.start >= 0 ? NEGATIVE_COLOR : POSITIVE_COLOR)
+}
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
+interface WaterfallProps {
+  steps: WaterfallStep[]
+  height?: number
+  className?: string
+}
+
+/**
+ * Waterfall chart showing how freight cost components build to a total.
+ * Uses the shared 7-component cost color ramp from design tokens.
+ */
+export function Waterfall({ steps, height = 260, className }: WaterfallProps) {
+  const { tooltip, show, hide } = useTooltip()
   const bars = buildBars(steps)
 
   return (
     <>
       <ChartContainer
         height={height}
-        margin={{ top: 20, right: 16, bottom: 48, left: 70 }}
+        margin={{ top: 20, right: 12, bottom: 48, left: 64 }}
         className={className}
       >
         {(_w, _h, bw, bh) => {
           const allValues = bars.flatMap((b) => [b.start, b.end])
           const yMin = Math.min(0, ...allValues)
           const yMax = Math.max(...allValues)
-          const yPad = (yMax - yMin) * 0.08
+          const yPad = (yMax - yMin) * 0.1
 
           const xScale = d3
             .scaleBand()
             .domain(bars.map((b) => b.label))
             .range([0, bw])
-            .padding(0.25)
+            .padding(0.28)
 
           const yScale = d3
             .scaleLinear()
@@ -96,121 +115,88 @@ export function Waterfall({
             .nice()
             .range([bh, 0])
 
-          const barWidth = xScale.bandwidth()
+          const bw2 = xScale.bandwidth()
 
           return (
             <>
               <AxisLeft
-                scale={yScale}
-                tickCount={6}
+                scale={yScale as d3.AxisScale<d3.AxisDomain>}
+                tickCount={5}
                 tickFormat={(d) => formatCompactUsd(d as number)}
-                label={currencyLabel}
                 height={bh}
               />
-              <AxisBottom scale={xScale} height={bh} width={bw} />
+              <AxisBottom scale={xScale as d3.AxisScale<d3.AxisDomain>} height={bh} width={bw} />
 
-              {/* Zero line */}
               {yMin < 0 && (
                 <line
-                  x1={0}
-                  x2={bw}
-                  y1={yScale(0)}
-                  y2={yScale(0)}
-                  stroke="#6b7280"
-                  strokeDasharray="4,2"
-                  strokeWidth={1}
+                  x1={0} x2={bw}
+                  y1={yScale(0)} y2={yScale(0)}
+                  stroke={CONNECTOR_COLOR} strokeWidth={1}
                 />
               )}
 
-              {/* Connector lines between bars */}
+              {/* Connector lines */}
               {bars.slice(0, -1).map((bar, i) => {
-                const nextBar = bars[i + 1]
-                const x1 = (xScale(bar.label) ?? 0) + barWidth
-                const x2 = xScale(nextBar.label) ?? 0
+                const next = bars[i + 1]
+                const x1 = (xScale(bar.label) ?? 0) + bw2
+                const x2 = xScale(next.label) ?? 0
                 const y = yScale(bar.end)
                 return (
                   <line
                     key={`conn-${i}`}
-                    x1={x1}
-                    x2={x2}
-                    y1={y}
-                    y2={y}
-                    stroke={CONNECTOR_COLOR}
-                    strokeWidth={1}
-                    strokeDasharray="3,2"
+                    x1={x1} x2={x2} y1={y} y2={y}
+                    stroke={CONNECTOR_COLOR} strokeWidth={1} strokeDasharray="3,2"
                   />
                 )
               })}
 
-              {/* Bars */}
               {bars.map((bar) => {
                 const x = xScale(bar.label) ?? 0
                 const top = yScale(Math.max(bar.start, bar.end))
                 const barH = Math.abs(yScale(bar.start) - yScale(bar.end))
                 const delta = bar.end - bar.start
-                const fill =
-                  bar.kind === 'total'
-                    ? NEUTRAL_COLOR
-                    : delta >= 0
-                      ? NEGATIVE_COLOR
-                      : POSITIVE_COLOR
+                const sign = delta >= 0 ? '+' : ''
+                const label = bar.kind === 'total'
+                  ? formatCompactUsd(bar.end)
+                  : `${sign}${formatCompactUsd(delta)}`
 
                 return (
-                  <rect
-                    key={bar.label}
-                    x={x}
-                    y={top}
-                    width={barWidth}
-                    height={Math.max(barH, 1)}
-                    fill={fill}
-                    fillOpacity={0.85}
-                    rx={2}
-                    style={{ cursor: 'pointer' }}
-                    onMouseEnter={(e) => {
-                      const svgEl = (e.target as SVGElement).ownerSVGElement
-                      const rect = svgEl?.getBoundingClientRect()
-                      show(
-                        e.clientX - (rect?.left ?? 0),
-                        e.clientY - (rect?.top ?? 0),
-                        <span>
-                          <strong className="block">{bar.label}</strong>
-                          {bar.kind === 'total'
-                            ? formatUsd(bar.end)
-                            : `${delta >= 0 ? '+' : ''}${formatUsd(delta)}`}
-                        </span>,
-                      )
-                    }}
-                    onMouseLeave={hide}
-                  />
-                )
-              })}
-
-              {/* Value labels on bars */}
-              {bars.map((bar) => {
-                const x = (xScale(bar.label) ?? 0) + barWidth / 2
-                const delta = bar.end - bar.start
-                const top = yScale(Math.max(bar.start, bar.end))
-                return (
-                  <text
-                    key={`label-${bar.label}`}
-                    x={x}
-                    y={top - 4}
-                    textAnchor="middle"
-                    fontSize={10}
-                    fill="#374151"
-                    pointerEvents="none"
-                  >
-                    {bar.kind === 'total'
-                      ? formatCompactUsd(bar.end)
-                      : `${delta >= 0 ? '+' : ''}${formatCompactUsd(delta)}`}
-                  </text>
+                  <g key={bar.key}>
+                    <rect
+                      x={x} y={top}
+                      width={bw2} height={Math.max(barH, 1)}
+                      fill={barFill(bar)} fillOpacity={0.9} rx={2}
+                      style={{ cursor: 'default' }}
+                      onMouseEnter={(e) => {
+                        const svg = (e.target as SVGElement).ownerSVGElement
+                        const r = svg?.getBoundingClientRect()
+                        show(
+                          e.clientX - (r?.left ?? 0),
+                          e.clientY - (r?.top ?? 0),
+                          <span>
+                            <strong className="block text-text-primary">{bar.label}</strong>
+                            <span className="font-mono text-text-secondary">{label}</span>
+                          </span>,
+                        )
+                      }}
+                      onMouseLeave={hide}
+                    />
+                    <text
+                      x={x + bw2 / 2} y={top - 4}
+                      textAnchor="middle" fontSize={10}
+                      fill="var(--color-text-secondary)"
+                      pointerEvents="none"
+                    >
+                      {label}
+                    </text>
+                  </g>
                 )
               })}
             </>
           )
         }}
       </ChartContainer>
-      <Tooltip state={tooltip} containerRef={svgRef} />
+      <Tooltip state={tooltip} containerRef={{ current: null }} />
     </>
   )
 }

@@ -1,29 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { totalCost } from '../types'
-import type { CostBreakdown } from '../types'
+import { SERVICE_LEVELS } from '../types'
 
-const makeCost = (overrides: Partial<CostBreakdown> = {}): CostBreakdown => ({
-  lineHaul: 0,
-  fuelSurcharge: 0,
-  residentialDelivery: 0,
-  deliveryAreaSurcharge: 0,
-  dimensionalWeight: 0,
-  signatureRequired: 0,
-  otherAccessorials: 0,
-  ...overrides,
-})
-
-describe('totalCost', () => {
-  it('returns 0 for an empty breakdown', () => {
-    expect(totalCost(makeCost())).toBe(0)
+describe('SERVICE_LEVELS', () => {
+  it('contains GROUND, EXPRESS, PRIORITY', () => {
+    const values = SERVICE_LEVELS.map((s) => s.value)
+    expect(values).toContain('GROUND')
+    expect(values).toContain('EXPRESS')
+    expect(values).toContain('PRIORITY')
   })
 
-  it('sums all components', () => {
-    const cost = makeCost({ lineHaul: 10000, fuelSurcharge: 2000, otherAccessorials: 500 })
-    expect(totalCost(cost)).toBe(12500)
-  })
-
-  it('works when only line haul is set', () => {
-    expect(totalCost(makeCost({ lineHaul: 5000 }))).toBe(5000)
+  it('each entry has a non-empty label', () => {
+    for (const s of SERVICE_LEVELS) {
+      expect(s.label.length).toBeGreaterThan(0)
+    }
   })
 })

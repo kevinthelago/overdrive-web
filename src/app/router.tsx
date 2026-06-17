@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter } from 'react-router-dom'
 import { AppShell } from '@/components/layout'
+import { RoutingPage } from '@/features/routing/RoutingPage'
 
 const CompetitorPage = lazy(() =>
   import('@/features/competitor').then((m) => ({ default: m.CompetitorPage }))
@@ -34,11 +35,11 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <ScreenStub title="Routing Explorer" />,
+        element: <RoutingPage />,
       },
       {
         path: 'routing',
-        element: <ScreenStub title="Routing Explorer" />,
+        element: <RoutingPage />,
       },
       {
         path: 'opportunities',

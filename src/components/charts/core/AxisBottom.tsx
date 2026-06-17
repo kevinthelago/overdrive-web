@@ -23,7 +23,7 @@ export function AxisBottom({
   useEffect(() => {
     if (!ref.current) return
     const axis = d3.axisBottom(scale).ticks(tickCount)
-    if (tickFormat) axis.tickFormat(tickFormat as Parameters<typeof axis.tickFormat>[0])
+    if (tickFormat) axis.tickFormat((d, _i) => tickFormat(d))
     d3.select(ref.current)
       .call(axis)
       .call((g) => g.select('.domain').attr('stroke', '#d1d5db'))

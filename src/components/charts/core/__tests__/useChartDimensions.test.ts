@@ -47,7 +47,7 @@ describe('useChartDimensions', () => {
     render(React.createElement(Spy, { margin: BASE, onDims: (d) => { captured = d } }))
 
     act(() => {
-      resizeCb!([{ contentRect: { width: 400, height: 300 } }])
+      resizeCb!([{ contentRect: { width: 400, height: 300 } as DOMRectReadOnly }])
     })
 
     expect(captured!.width).toBe(400)
@@ -62,7 +62,7 @@ describe('useChartDimensions', () => {
     render(React.createElement(Spy, { margin: big, onDims: (d) => { captured = d } }))
 
     act(() => {
-      resizeCb!([{ contentRect: { width: 100, height: 100 } }])
+      resizeCb!([{ contentRect: { width: 100, height: 100 } as DOMRectReadOnly }])
     })
 
     expect(captured!.boundedWidth).toBe(0)

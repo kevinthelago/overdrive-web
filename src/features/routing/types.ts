@@ -1,59 +1,44 @@
-/** Money value in USD cents to avoid float precision issues */
-export type Cents = number
+import type { CostBreakdown, Money, RouteCandidate } from '@/lib/api/types'
 
-export interface CostBreakdown {
-  lineHaul: Cents
-  fuelSurcharge: Cents
-  residentialDelivery: Cents
-  deliveryAreaSurcharge: Cents
-  dimensionalWeight: Cents
-  signatureRequired: Cents
-  otherAccessorials: Cents
-}
+export type { CostBreakdown, Money, RouteCandidate }
+export type { RouteFactor } from '@/lib/api/types'
 
-export function totalCost(breakdown: CostBreakdown): Cents {
-  return Object.values(breakdown).reduce((sum, v) => sum + v, 0)
-}
+// ── Request / response DTOs ─────────────────────────────────────────────────
 
-export interface Carrier {
-  scac: string
-  name: string
-  mode: 'LTL' | 'TL' | 'Parcel' | 'Rail' | 'Intermodal'
-}
-
-export interface Route {
-  id: string
-  origin: string
-  destination: string
-  carrier: Carrier
+export interface RouteSolveRequest {
+  productId: string
+  destinationZip: string
   serviceLevel: string
-  transitDays: number
-  cost: CostBreakdown
-  /** ISO date string when this rate was retrieved */
-  ratedAt: string
-  /** Whether this is the currently-used route for the shipment */
-  isCurrent: boolean
+  quantity: number
+  scenarioId?: string | null
 }
 
-export interface RouteOpportunity {
-  shipmentId: string
-  origin: string
-  destination: string
-  weight: number
-  dimensions: { length: number; width: number; height: number }
-  currentRoute: Route
-  alternativeRoutes: Route[]
-  bestSavings: Cents
+export interface RouteSolveResponse {
+  /** Ordered cheapest-first; first entry is the winner. */
+  candidates: SolvedCandidate[]
+  /** True when every carrier returned infeasible. */
+  overConstrained: boolean
 }
 
-export interface RouteFilter {
-  mode?: Carrier['mode'][]
-  maxTransitDays?: number
-  carriersInclude?: string[]
-  carriersExclude?: string[]
+export interface SolvedCandidate extends RouteCandidate {
+  /** Delta cost vs current/baseline (negative = cheaper) */
+  deltaCost: Money
+  /** Whether this route is currently infeasible given the constraints */
+  infeasible: boolean
+  /** The binding constraint that makes this route infeasible, if any */
+  bindingConstraint?: string
 }
 
-export interface RouteSortKey {
-  field: 'cost' | 'transitDays' | 'carrier'
-  direction: 'asc' | 'desc'
-}
+// ── Service-level options ────────────────────────────────────────────────────
+
+export type ServiceLevel = 'GROUND' | 'EXPRESS' | 'PRIORITY'
+
+export const SERVICE_LEVELS: { value: ServiceLevel; label: string }[] = [
+  { value: 'GROUND', label: 'Ground' },
+  { value: 'EXPRESS', label: 'Express' },
+  { value: 'PRIORITY', label: 'Priority' },
+]
+
+// ── UI state ─────────────────────────────────────────────────────────────────
+
+export type ChartMode = 'waterfall' | 'stacked'
