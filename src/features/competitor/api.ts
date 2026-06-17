@@ -1,42 +1,35 @@
 import { useQuery } from '@tanstack/react-query'
+import { apiClient } from '@/lib/api'
 import {
   CompetitorDetailSchema,
   CompetitorPageSchema,
-  type Competitor,
   type CompetitorDetail,
   type CompetitorPage,
 } from './types'
 
-const API_BASE = (import.meta as ImportMeta & { env: Record<string, string> }).env
-  .VITE_API_BASE_URL ?? '/api'
-
-async function fetchJson<T>(path: string, schema: { parse: (v: unknown) => T }): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { Accept: 'application/json' },
-    credentials: 'include',
-  })
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${path}`)
-  return schema.parse(await res.json())
-}
-
 export const competitorKeys = {
   all: ['competitors'] as const,
-  list: (page: number, pageSize: number) => ['competitors', 'list', page, pageSize] as const,
+  list: (page: number, size: number) => ['competitors', 'list', page, size] as const,
   detail: (id: string) => ['competitors', id] as const,
 }
 
-export function useCompetitors(page = 0, pageSize = 20) {
+export function useCompetitors(page = 0, size = 20) {
   return useQuery<CompetitorPage>({
-    queryKey: competitorKeys.list(page, pageSize),
+    queryKey: competitorKeys.list(page, size),
     queryFn: () =>
-      fetchJson(`/competitors?page=${page}&pageSize=${pageSize}`, CompetitorPageSchema),
+      apiClient
+        .get<unknown>('/competitors', { params: { page, size } })
+        .then((raw) => CompetitorPageSchema.parse(raw)),
   })
 }
 
 export function useCompetitor(id: string) {
   return useQuery<CompetitorDetail>({
     queryKey: competitorKeys.detail(id),
-    queryFn: () => fetchJson(`/competitors/${id}`, CompetitorDetailSchema),
+    queryFn: () =>
+      apiClient
+        .get<unknown>(`/competitors/${id}`)
+        .then((raw) => CompetitorDetailSchema.parse(raw)),
     enabled: Boolean(id),
   })
 }

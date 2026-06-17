@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
 import * as topojson from 'topojson-client'
 import type { Topology, GeometryCollection } from 'topojson-specification'
+import { cn } from '@/lib/utils'
 import { FIPS_TO_ABBR, FIPS_TO_NAME } from './fips'
 
 export type ChoroplethDatum = {
-  /** Two-letter FIPS-derived state code, e.g. "CA" or a numeric FIPS "06". */
+  /** Two-letter state abbreviation (e.g. "CA") or 2-digit FIPS string (e.g. "06"). */
   stateCode: string
   value: number
 }
@@ -19,7 +20,6 @@ type TooltipState = {
 
 type Props = {
   data: ChoroplethDatum[]
-  /** Converts a raw value to the label shown in the tooltip. */
   formatValue?: (v: number) => string
   colorScheme?: readonly string[]
   width?: number
@@ -30,8 +30,7 @@ type Props = {
 const DEFAULT_COLORS = d3.schemeBlues[7] as readonly string[]
 
 /**
- * Renders a US state-level choropleth map.
- * Expects `data` keyed by two-letter state abbreviation or 2-digit FIPS code.
+ * US state-level choropleth using D3 AlbersUSA projection.
  * Topology is fetched once from cdn.jsdelivr.net/npm/us-atlas.
  */
 export function Choropleth({
@@ -58,24 +57,13 @@ export function Choropleth({
       .domain([min, max])
       .range(colorScheme as string[])
 
-    const projection = d3
-      .geoAlbersUsa()
-      .scale(1300)
-      .translate([width / 2, height / 2])
-
+    const projection = d3.geoAlbersUsa().scale(1300).translate([width / 2, height / 2])
     const path = d3.geoPath().projection(projection)
 
-    // US states + nation topology (us-atlas 3.x format)
-    d3.json<Topology>(
-      'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json'
-    ).then((us) => {
+    d3.json<Topology>('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json').then((us) => {
       if (!us || !svgRef.current) return
 
-      // Build FIPS → state abbreviation lookup from the topology properties
-      const statesGeo = topojson.feature(
-        us,
-        us.objects['states'] as GeometryCollection
-      )
+      const statesGeo = topojson.feature(us, us.objects['states'] as GeometryCollection)
 
       svg
         .append('g')
@@ -87,9 +75,9 @@ export function Choropleth({
           const fips = String((feature.id as number)).padStart(2, '0')
           const abbr = FIPS_TO_ABBR[fips] ?? fips
           const value = valueByCode.get(abbr) ?? valueByCode.get(fips)
-          return value != null ? color(value) : '#e5e7eb'
+          return value != null ? color(value) : 'var(--color-surface-raised, #e5e7eb)'
         })
-        .attr('stroke', '#fff')
+        .attr('stroke', 'var(--color-border, #fff)')
         .attr('stroke-width', 0.5)
         .on('mousemove', (event: MouseEvent, feature) => {
           const fips = String((feature.id as number)).padStart(2, '0')
@@ -105,12 +93,13 @@ export function Choropleth({
         })
         .on('mouseleave', () => setTooltip(null))
 
-      // Nation outline
       svg
         .append('path')
-        .datum(topojson.mesh(us, us.objects['states'] as GeometryCollection, (a, b) => a === b))
+        .datum(
+          topojson.mesh(us, us.objects['states'] as GeometryCollection, (a, b) => a === b)
+        )
         .attr('fill', 'none')
-        .attr('stroke', '#9ca3af')
+        .attr('stroke', 'var(--color-border-subtle, #9ca3af)')
         .attr('stroke-width', 0.5)
         .attr('d', path as unknown as string)
     })
@@ -122,11 +111,9 @@ export function Choropleth({
     const legendY = height - 40
 
     const defs = svg.append('defs')
-    const linearGrad = defs
-      .append('linearGradient')
-      .attr('id', 'choropleth-legend-grad')
+    const grad = defs.append('linearGradient').attr('id', 'choropleth-legend-grad')
     colorScheme.forEach((c, i) => {
-      linearGrad
+      grad
         .append('stop')
         .attr('offset', `${(i / (colorScheme.length - 1)) * 100}%`)
         .attr('stop-color', c)
@@ -140,23 +127,19 @@ export function Choropleth({
       .attr('rx', 2)
       .attr('fill', 'url(#choropleth-legend-grad)')
 
-    const legendScale = d3.scaleLinear().domain([min, max]).range([0, legendWidth])
+    const scale = d3.scaleLinear().domain([min, max]).range([0, legendWidth])
     legend
       .append('g')
       .attr('transform', `translate(0,${legendHeight})`)
       .call(
-        d3
-          .axisBottom(legendScale)
-          .ticks(4)
-          .tickSize(4)
-          .tickFormat((v) => formatValue(v as number))
+        d3.axisBottom(scale).ticks(4).tickSize(4).tickFormat((v) => formatValue(v as number))
       )
       .select('.domain')
       .remove()
   }, [data, colorScheme, formatValue, width, height])
 
   return (
-    <div className={`relative ${className ?? ''}`}>
+    <div className={cn('relative', className)}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${width} ${height}`}
@@ -165,7 +148,7 @@ export function Choropleth({
       />
       {tooltip && (
         <div
-          className="pointer-events-none absolute z-10 rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg"
+          className="pointer-events-none absolute z-10 rounded bg-surface border border-border px-2 py-1 text-xs text-text-primary shadow-elevated"
           style={{ left: tooltip.x + 12, top: tooltip.y - 28 }}
         >
           <span className="font-semibold">{tooltip.label}</span>: {tooltip.value}

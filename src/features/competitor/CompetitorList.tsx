@@ -1,115 +1,108 @@
 import { useState } from 'react'
+import { DataTable, type ColumnDef, Pill, Button } from '@/components/ui'
 import { useCompetitors } from './api'
 import type { Competitor } from './types'
 
 type Props = {
   onSelect?: (competitor: Competitor) => void
-  selectedId?: string
 }
 
-export function CompetitorList({ onSelect, selectedId }: Props) {
-  const [page, setPage] = useState(0)
-  const pageSize = 20
-  const { data, isLoading, isError, error } = useCompetitors(page, pageSize)
+function buildColumns(onSelect?: (c: Competitor) => void): ColumnDef<Competitor>[] {
+  return [
+    {
+      key: 'name',
+      header: 'Name',
+      cell: (c) => (
+        <button
+          className="text-left font-medium text-text-primary hover:text-accent"
+          onClick={() => onSelect?.(c)}
+        >
+          {c.name}
+        </button>
+      ),
+    },
+    {
+      key: 'region',
+      header: 'Region',
+      cell: (c) => <span className="text-text-secondary">{c.region}</span>,
+    },
+    {
+      key: 'tags',
+      header: 'Tags',
+      cell: (c) => (
+        <div className="flex flex-wrap gap-1">
+          {c.tags.map((tag) => (
+            <Pill key={tag}>{tag}</Pill>
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: 'url',
+      header: 'Website',
+      cell: (c) => (
+        <a
+          href={c.url}
+          target="_blank"
+          rel="noreferrer"
+          className="truncate text-accent hover:underline"
+        >
+          {c.url}
+        </a>
+      ),
+    },
+  ]
+}
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12 text-gray-500 text-sm">
-        Loading competitors…
-      </div>
-    )
-  }
+export function CompetitorList({ onSelect }: Props) {
+  const [page, setPage] = useState(0)
+  const size = 20
+  const { data, isLoading, isError, error } = useCompetitors(page, size)
 
   if (isError) {
     return (
-      <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+      <div className="rounded-md border border-danger/20 bg-danger-muted p-4 text-sm text-danger">
         Failed to load competitors: {(error as Error).message}
       </div>
     )
   }
 
-  const { items = [], total = 0 } = data ?? {}
-  const totalPages = Math.ceil(total / pageSize)
+  const items = data?.content ?? []
+  const totalElements = data?.totalElements ?? 0
+  const totalPages = data?.totalPages ?? 0
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left font-semibold text-gray-600">Name</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-600">Region</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-600">Tags</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-600">URL</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
-            {items.map((c) => (
-              <tr
-                key={c.id}
-                onClick={() => onSelect?.(c)}
-                className={`cursor-pointer transition-colors hover:bg-indigo-50 ${
-                  selectedId === c.id ? 'bg-indigo-50 ring-1 ring-inset ring-indigo-300' : ''
-                }`}
-              >
-                <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
-                <td className="px-4 py-3 text-gray-600">{c.region}</td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {c.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <a
-                    href={c.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="truncate text-indigo-600 hover:text-indigo-800 hover:underline"
-                  >
-                    {c.url}
-                  </a>
-                </td>
-              </tr>
-            ))}
-            {items.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
-                  No competitors found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={buildColumns(onSelect)}
+        data={items}
+        keyExtractor={(c) => c.id}
+        loading={isLoading}
+        empty={<span className="text-text-muted">No competitors found.</span>}
+      />
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center justify-between text-sm text-text-muted">
           <span>
-            Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} of {total}
+            {page * size + 1}–{Math.min((page + 1) * size, totalElements)} of {totalElements}
           </span>
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="rounded px-3 py-1 ring-1 ring-gray-200 hover:bg-gray-50 disabled:opacity-40"
             >
               Previous
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              className="rounded px-3 py-1 ring-1 ring-gray-200 hover:bg-gray-50 disabled:opacity-40"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       )}

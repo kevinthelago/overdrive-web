@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest'
 import { OpportunitySchema, OpportunityPageSchema } from './types'
 
 describe('OpportunitySchema', () => {
@@ -28,8 +27,7 @@ describe('OpportunitySchema', () => {
       score: 150,
       competitorId: null,
     }
-    const result = OpportunitySchema.safeParse(raw)
-    expect(result.success).toBe(false)
+    expect(OpportunitySchema.safeParse(raw).success).toBe(false)
   })
 
   it('rejects an unknown opportunity type', () => {
@@ -41,15 +39,14 @@ describe('OpportunitySchema', () => {
       score: 50,
       competitorId: null,
     }
-    const result = OpportunitySchema.safeParse(raw)
-    expect(result.success).toBe(false)
+    expect(OpportunitySchema.safeParse(raw).success).toBe(false)
   })
 })
 
 describe('OpportunityPageSchema', () => {
-  it('parses a valid page response', () => {
+  it('parses a Spring Data page response', () => {
     const raw = {
-      items: [
+      content: [
         {
           id: 'opp-1',
           title: 'Test',
@@ -59,11 +56,15 @@ describe('OpportunityPageSchema', () => {
           competitorId: 'comp-1',
         },
       ],
-      total: 1,
+      totalElements: 1,
+      totalPages: 1,
       page: 0,
-      pageSize: 20,
+      size: 20,
     }
     const result = OpportunityPageSchema.safeParse(raw)
     expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.content).toHaveLength(1)
+    }
   })
 })

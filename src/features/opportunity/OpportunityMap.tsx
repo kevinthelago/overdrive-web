@@ -1,6 +1,6 @@
-import { useGeographicOpportunities } from './api'
-import { Choropleth, type ChoroplethDatum } from '../../components/charts/Choropleth'
 import * as d3 from 'd3'
+import { useGeographicOpportunities } from './api'
+import { Choropleth, type ChoroplethDatum } from '@/components/charts/Choropleth'
 
 const COLOR_SCHEME = d3.schemeGreens[7] as readonly string[]
 
@@ -13,16 +13,12 @@ export function OpportunityMap() {
   }))
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-gray-400 text-sm">
-        Loading map…
-      </div>
-    )
+    return <div className="h-64 animate-pulse rounded-md bg-surface-raised" />
   }
 
   if (isError) {
     return (
-      <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+      <div className="rounded-md border border-danger/20 bg-danger-muted p-4 text-sm text-danger">
         Failed to load opportunity geographic data.
       </div>
     )
@@ -30,12 +26,12 @@ export function OpportunityMap() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-gray-700">Opportunity Score by State</h3>
+      <p className="text-sm font-semibold text-text-secondary">Opportunity Score by State</p>
       <Choropleth
         data={choroplethData}
         colorScheme={COLOR_SCHEME}
         formatValue={(v) => `Score: ${v.toFixed(1)}`}
-        className="rounded-lg border border-gray-200"
+        className="rounded-md border border-border"
       />
     </div>
   )

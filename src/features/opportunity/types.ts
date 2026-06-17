@@ -13,14 +13,6 @@ export const OpportunitySchema = z.object({
 })
 export type Opportunity = z.infer<typeof OpportunitySchema>
 
-export const OpportunityPageSchema = z.object({
-  items: z.array(OpportunitySchema),
-  total: z.number(),
-  page: z.number(),
-  pageSize: z.number(),
-})
-export type OpportunityPage = z.infer<typeof OpportunityPageSchema>
-
 export const OpportunityDetailSchema = OpportunitySchema.extend({
   description: z.string().optional(),
   estimatedRevenue: z.number().optional(),
@@ -28,6 +20,16 @@ export const OpportunityDetailSchema = OpportunitySchema.extend({
   actionItems: z.array(z.string()).optional(),
 })
 export type OpportunityDetail = z.infer<typeof OpportunityDetailSchema>
+
+/** Spring Data Page<Opportunity> shape */
+export const OpportunityPageSchema = z.object({
+  content: z.array(OpportunitySchema),
+  totalElements: z.number(),
+  totalPages: z.number(),
+  page: z.number(),
+  size: z.number(),
+})
+export type OpportunityPage = z.infer<typeof OpportunityPageSchema>
 
 /** Aggregated per-state opportunity score for choropleth rendering. */
 export type StateOpportunityScore = {

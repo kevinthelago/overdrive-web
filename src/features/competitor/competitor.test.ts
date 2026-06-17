@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest'
 import { CompetitorSchema, CompetitorPageSchema } from './types'
 
 describe('CompetitorSchema', () => {
@@ -19,14 +18,19 @@ describe('CompetitorSchema', () => {
 })
 
 describe('CompetitorPageSchema', () => {
-  it('parses a valid page response', () => {
+  it('parses a Spring Data page response', () => {
     const raw = {
-      items: [{ id: '1', name: 'Acme', url: 'https://acme.com', region: 'CA', tags: [] }],
-      total: 1,
+      content: [{ id: '1', name: 'Acme', url: 'https://acme.com', region: 'CA', tags: [] }],
+      totalElements: 1,
+      totalPages: 1,
       page: 0,
-      pageSize: 20,
+      size: 20,
     }
     const result = CompetitorPageSchema.safeParse(raw)
     expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.content).toHaveLength(1)
+      expect(result.data.totalElements).toBe(1)
+    }
   })
 })
