@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import { type ColumnDef } from '../../../components/ui/DataTable';
 import { Button } from '../../../components/ui/Button';
-import { useToast } from '../../../components/ui/Toast';
+import { useAppStore } from '../../../state/appStore';
 import { EntityList } from '../components/EntityList';
 import { DeleteDialog } from '../components/DeleteDialog';
 import { RateTableForm } from './RateTableForm';
@@ -14,7 +14,7 @@ function formatCents(cents: number): string {
 }
 
 export function RateTableList() {
-  const { toast } = useToast();
+  const addToast = useAppStore(state => state.addToast);
   const [params, setParams] = useState<RateTableListParams>({ page: 0, size: 20 });
   const [search, setSearch] = useState('');
   const [carrierFilter, setCarrierFilter] = useState('');
@@ -43,13 +43,14 @@ export function RateTableList() {
     if (!deleteTarget) return;
     try {
       await deleteRateTable.mutateAsync({ id: deleteTarget.id, version: deleteTarget.version });
-      toast({ title: 'Rate table entry deleted.' });
+      addToast({ title: 'Rate table entry deleted.', variant: 'success' });
       closeDelete();
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setBlockedRefs((err.body as { references?: BlockedDeleteReference[] }).references ?? []);
+        const refs = (err.body as Record<string, unknown>).references as BlockedDeleteReference[] | undefined;
+        setBlockedRefs(refs ?? []);
       } else {
-        toast({ title: 'Delete failed', description: String(err), variant: 'destructive' });
+        addToast({ title: 'Delete failed', description: String(err), variant: 'danger' });
       }
     }
   }
@@ -66,28 +67,20 @@ export function RateTableList() {
   }
 
   const columns: ColumnDef<RateTable>[] = [
-    { accessorKey: 'carrierName', header: 'Carrier' },
-    { accessorKey: 'serviceLevelName', header: 'Service Level' },
-    { accessorKey: 'originZone', header: 'Origin Zone' },
-    { accessorKey: 'destZone', header: 'Dest Zone' },
+    { key: 'carrierName', header: 'Carrier', cell: (rt) => rt.carrierName },
+    { key: 'serviceLevelName', header: 'Service Level', cell: (rt) => rt.serviceLevelName },
+    { key: 'originZone', header: 'Origin Zone', cell: (rt) => rt.originZone },
+    { key: 'destZone', header: 'Dest Zone', cell: (rt) => rt.destZone },
+    { key: 'weightBand', header: 'Weight Band (lb)', cell: (rt) => `${rt.weightMinLb}–${rt.weightMaxLb}` },
+    { key: 'rateCents', header: 'Rate', cell: (rt) => formatCents(rt.rateCents) },
+    { key: 'effectiveDate', header: 'Effective', cell: (rt) => rt.effectiveDate },
     {
-      id: 'weightBand',
-      header: 'Weight Band (lb)',
-      cell: ({ row }) => `${row.original.weightMinLb}–${row.original.weightMaxLb}`,
-    },
-    {
-      accessorKey: 'rateCents',
-      header: 'Rate',
-      cell: ({ row }) => formatCents(row.original.rateCents),
-    },
-    { accessorKey: 'effectiveDate', header: 'Effective' },
-    {
-      id: 'actions',
+      key: 'actions',
       header: '',
-      cell: ({ row }) => (
+      cell: (rt) => (
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}>Edit</Button>
-          <Button variant="ghost" size="sm" onClick={() => openDelete(row.original)}>Delete</Button>
+          <Button variant="ghost" size="sm" onClick={() => openEdit(rt)}>Edit</Button>
+          <Button variant="ghost" size="sm" onClick={() => openDelete(rt)}>Delete</Button>
         </div>
       ),
     },

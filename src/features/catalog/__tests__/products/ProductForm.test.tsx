@@ -19,10 +19,13 @@ vi.mock('../../components/OptimisticLockDialog', () => ({
 vi.mock('../../../../components/ui/Drawer', () => ({
   Drawer: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div role="dialog">{children}</div> : null,
-  DrawerContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DrawerHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DrawerTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DrawerFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DrawerContent: ({ title, children, footer }: { title?: string; children: React.ReactNode; footer?: React.ReactNode }) => (
+    <div>
+      {title && <h2>{title}</h2>}
+      {children}
+      {footer}
+    </div>
+  ),
 }));
 
 vi.mock('../../../../components/ui/Button', () => ({
@@ -46,7 +49,7 @@ vi.mock('../../../../components/ui/Button', () => ({
 }));
 
 vi.mock('../../../../components/ui/FormField', () => ({
-  FormField: ({
+  FormGroup: ({
     label,
     error,
     children,
@@ -64,16 +67,17 @@ vi.mock('../../../../components/ui/FormField', () => ({
   ),
 }));
 
-vi.mock('../../../../components/ui/Toast', () => ({
-  useToast: () => ({ toast: vi.fn() }),
+vi.mock('../../../../state/appStore', () => ({
+  useAppStore: (selector: (s: { addToast: ReturnType<typeof vi.fn> }) => unknown) =>
+    selector({ addToast: vi.fn() }),
 }));
 
 vi.mock('../../../../lib/api/client', () => ({
   ApiError: class ApiError extends Error {
     status: number;
     body: unknown;
-    constructor(message: string, status: number, body: unknown) {
-      super(message);
+    constructor(status: number, body: unknown) {
+      super(typeof body === 'object' && body !== null && 'detail' in body ? String((body as Record<string, unknown>).detail) : 'ApiError');
       this.status = status;
       this.body = body;
     }
@@ -159,7 +163,8 @@ describe('ProductForm', () => {
   });
 
   it('surfaces server field error inline', async () => {
-    const fieldError = new ApiError('Unprocessable', 422, {
+    const fieldError = new ApiError(422, {
+      type: 'about:blank', title: 'Validation failed', status: 422,
       fieldErrors: { sku: 'SKU already exists' },
     });
     vi.mocked(useCreateProduct).mockReturnValue({
@@ -183,8 +188,9 @@ describe('ProductForm', () => {
   });
 
   it('shows optimistic lock dialog on 409 conflict', async () => {
-    const lockError = new ApiError('Conflict', 409, {
+    const lockError = new ApiError(409, {
       type: 'https://overdrive.local/errors/optimistic-lock-conflict',
+      title: 'Conflict', status: 409,
     });
     vi.mocked(useUpdateProduct).mockReturnValue({
       mutateAsync: vi.fn().mockRejectedValue(lockError),

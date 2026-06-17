@@ -57,8 +57,9 @@ export function EntityList<T extends object>({
       <DataTable
         columns={columns}
         data={data?.content ?? []}
-        isLoading={isLoading}
-        emptyMessage={`No ${title.toLowerCase()} found.`}
+        keyExtractor={(row, i) => (row as { id?: string }).id ?? String(i)}
+        loading={isLoading}
+        empty={`No ${title.toLowerCase()} found.`}
       />
 
       {totalPages > 1 && (

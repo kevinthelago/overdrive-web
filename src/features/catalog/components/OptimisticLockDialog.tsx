@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/ui/Dialog';
+import { Dialog, DialogContent } from '../../../components/ui/Dialog';
 import { Button } from '../../../components/ui/Button';
 
 interface OptimisticLockDialogProps {
@@ -14,16 +14,13 @@ export function OptimisticLockDialog({ open, onReload }: OptimisticLockDialogPro
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Record Modified</DialogTitle>
-        </DialogHeader>
+      <DialogContent
+        title="Record Modified"
+        footer={<Button onClick={handleReload}>Reload</Button>}
+      >
         <p className="text-sm text-white/80">
           Someone else modified this record. Reload to see the latest version before making changes.
         </p>
-        <DialogFooter>
-          <Button onClick={handleReload}>Reload</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

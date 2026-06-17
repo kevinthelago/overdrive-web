@@ -7,9 +7,9 @@ import { renderWithProviders } from '../setup';
 import type { Page } from '../../types';
 
 vi.mock('../../../../components/ui/DataTable', () => ({
-  DataTable: ({ data, isLoading, emptyMessage }: { data: unknown[]; isLoading: boolean; emptyMessage: string }) => {
-    if (isLoading) return <div>Loading…</div>;
-    if (data.length === 0) return <div>{emptyMessage}</div>;
+  DataTable: ({ data, loading, empty }: { data: unknown[]; loading: boolean; empty: string }) => {
+    if (loading) return <div>Loading…</div>;
+    if (data.length === 0) return <div>{empty}</div>;
     return <div data-testid="data-table">{data.length} rows</div>;
   },
 }));
@@ -32,7 +32,7 @@ vi.mock('../../../../components/ui/Button', () => ({
 
 interface Row { id: string; name: string }
 
-const columns = [{ accessorKey: 'name', header: 'Name' }];
+const columns = [{ key: 'name', header: 'Name', cell: (r: Row) => r.name }];
 
 const mockPage: Page<Row> = {
   content: [{ id: '1', name: 'Alpha' }, { id: '2', name: 'Beta' }],

@@ -24,16 +24,16 @@ vi.mock('../../components/DeleteDialog', () => ({
 vi.mock('../../../../components/ui/DataTable', () => ({
   DataTable: ({
     data,
-    isLoading,
-    emptyMessage,
+    loading,
+    empty,
   }: {
     data: Product[];
-    isLoading: boolean;
-    emptyMessage: string;
+    loading: boolean;
+    empty: string;
     columns: unknown[];
   }) => {
-    if (isLoading) return <div>Loading…</div>;
-    if (data.length === 0) return <div>{emptyMessage}</div>;
+    if (loading) return <div>Loading…</div>;
+    if (data.length === 0) return <div>{empty}</div>;
     return (
       <table>
         <tbody>
@@ -69,16 +69,17 @@ vi.mock('../../../../components/ui/Pill', () => ({
   Pill: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
 
-vi.mock('../../../../components/ui/Toast', () => ({
-  useToast: () => ({ toast: vi.fn() }),
+vi.mock('../../../../state/appStore', () => ({
+  useAppStore: (selector: (s: { addToast: ReturnType<typeof vi.fn> }) => unknown) =>
+    selector({ addToast: vi.fn() }),
 }));
 
 vi.mock('../../../../lib/api/client', () => ({
   ApiError: class ApiError extends Error {
     status: number;
     body: unknown;
-    constructor(message: string, status: number, body: unknown) {
-      super(message);
+    constructor(status: number, body: unknown) {
+      super('ApiError');
       this.status = status;
       this.body = body;
     }

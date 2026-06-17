@@ -2,7 +2,7 @@ import { useState, type ChangeEvent } from 'react';
 import { type ColumnDef } from '../../../components/ui/DataTable';
 import { Button } from '../../../components/ui/Button';
 import { Pill } from '../../../components/ui/Pill';
-import { useToast } from '../../../components/ui/Toast';
+import { useAppStore } from '../../../state/appStore';
 import { EntityList } from '../components/EntityList';
 import { DeleteDialog } from '../components/DeleteDialog';
 import { ProductForm } from './ProductForm';
@@ -18,16 +18,16 @@ const CATEGORY_LABELS: Record<ProductCategory, string> = {
   HIGH_VALUE: 'High Value',
 };
 
-const CATEGORY_COLORS: Record<ProductCategory, string> = {
+const CATEGORY_VARIANTS: Record<ProductCategory, 'default' | 'accent' | 'warning' | 'danger' | 'success'> = {
   STANDARD: 'default',
-  PERISHABLE: 'blue',
-  HAZMAT: 'orange',
-  DANGEROUS_GOODS: 'red',
-  HIGH_VALUE: 'purple',
+  PERISHABLE: 'accent',
+  HAZMAT: 'warning',
+  DANGEROUS_GOODS: 'danger',
+  HIGH_VALUE: 'success',
 };
 
 export function ProductList() {
-  const { toast } = useToast();
+  const addToast = useAppStore(state => state.addToast);
   const [params, setParams] = useState<ProductListParams>({ page: 0, size: 20, sort: 'name,asc' });
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<ProductCategory | ''>('');
@@ -68,14 +68,14 @@ export function ProductList() {
     if (!deleteTarget) return;
     try {
       await deleteProduct.mutateAsync({ id: deleteTarget.id, version: deleteTarget.version });
-      toast({ title: `"${deleteTarget.name}" deleted.` });
+      addToast({ title: `"${deleteTarget.name}" deleted.`, variant: 'success' });
       closeDelete();
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        const problem = err.body as { references?: BlockedDeleteReference[] };
-        setBlockedRefs(problem.references ?? []);
+        const refs = (err.body as Record<string, unknown>).references as BlockedDeleteReference[] | undefined;
+        setBlockedRefs(refs ?? []);
       } else {
-        toast({ title: 'Delete failed', description: String(err), variant: 'destructive' });
+        addToast({ title: 'Delete failed', description: String(err), variant: 'danger' });
       }
     }
   }
@@ -91,36 +91,36 @@ export function ProductList() {
   }
 
   const columns: ColumnDef<Product>[] = [
-    { accessorKey: 'sku', header: 'SKU' },
-    { accessorKey: 'name', header: 'Name' },
+    { key: 'sku', header: 'SKU', cell: (p) => p.sku },
+    { key: 'name', header: 'Name', cell: (p) => p.name },
     {
-      accessorKey: 'category',
+      key: 'category',
       header: 'Category',
-      cell: ({ row }) => (
-        <Pill color={CATEGORY_COLORS[row.original.category]}>
-          {CATEGORY_LABELS[row.original.category]}
+      cell: (p) => (
+        <Pill variant={CATEGORY_VARIANTS[p.category]}>
+          {CATEGORY_LABELS[p.category]}
         </Pill>
       ),
     },
     {
-      accessorKey: 'weightLb',
+      key: 'weightLb',
       header: 'Weight (lb)',
-      cell: ({ row }) => row.original.weightLb.toFixed(2),
+      cell: (p) => p.weightLb.toFixed(2),
     },
     {
-      accessorKey: 'active',
+      key: 'active',
       header: 'Active',
-      cell: ({ row }) => (row.original.active ? 'Yes' : 'No'),
+      cell: (p) => (p.active ? 'Yes' : 'No'),
     },
     {
-      id: 'actions',
+      key: 'actions',
       header: '',
-      cell: ({ row }) => (
+      cell: (p) => (
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}>
+          <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
             Edit
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => openDelete(row.original)}>
+          <Button variant="ghost" size="sm" onClick={() => openDelete(p)}>
             Delete
           </Button>
         </div>

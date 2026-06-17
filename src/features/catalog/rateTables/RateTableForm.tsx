@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '../../../components/ui/Drawer';
+import { Drawer, DrawerContent } from '../../../components/ui/Drawer';
 import { Button } from '../../../components/ui/Button';
-import { FormField } from '../../../components/ui/FormField';
-import { useToast } from '../../../components/ui/Toast';
+import { FormGroup } from '../../../components/ui/FormField';
 import { OptimisticLockDialog } from '../components/OptimisticLockDialog';
 import { useCreateRateTable, useUpdateRateTable, useAllCarriers, useServiceLevelsByCarrier } from '../hooks';
 import { rateTableSchema, type RateTableFormData } from '../schemas';
 import { ApiError } from '../../../lib/api/client';
+import { useAppStore } from '../../../state/appStore';
 import type { RateTable } from '../types';
 
 interface RateTableFormProps {
@@ -18,7 +18,7 @@ interface RateTableFormProps {
 }
 
 export function RateTableForm({ open, onClose, rateTable }: RateTableFormProps) {
-  const { toast } = useToast();
+  const addToast = useAppStore(state => state.addToast);
   const [lockConflict, setLockConflict] = useState(false);
   const createRateTable = useCreateRateTable();
   const updateRateTable = useUpdateRateTable();
@@ -56,30 +56,30 @@ export function RateTableForm({ open, onClose, rateTable }: RateTableFormProps) 
     try {
       if (isEditing) {
         await updateRateTable.mutateAsync({ id: rateTable.id, data: payload, version: rateTable.version });
-        toast({ title: 'Rate table entry updated.' });
+        addToast({ title: 'Rate table entry updated.', variant: 'success' });
       } else {
         await createRateTable.mutateAsync(payload);
-        toast({ title: 'Rate table entry created.' });
+        addToast({ title: 'Rate table entry created.', variant: 'success' });
       }
       onClose();
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 409 && (err.body as { type?: string }).type?.endsWith('optimistic-lock-conflict')) {
+        if (err.status === 409 && err.body.type.endsWith('optimistic-lock-conflict')) {
           setLockConflict(true);
           return;
         }
         if (err.status === 422 || err.status === 400) {
-          const problem = err.body as { fieldErrors?: Record<string, string> };
-          if (problem.fieldErrors) {
-            for (const [field, message] of Object.entries(problem.fieldErrors)) {
+          const fieldErrors = (err.body as Record<string, unknown>).fieldErrors as Record<string, string> | undefined;
+          if (fieldErrors) {
+            for (const [field, message] of Object.entries(fieldErrors)) {
               setError(field as keyof RateTableFormData, { message });
             }
             return;
           }
         }
-        toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
+        addToast({ title: 'Save failed', description: err.message, variant: 'danger' });
       } else {
-        toast({ title: 'Save failed', description: String(err), variant: 'destructive' });
+        addToast({ title: 'Save failed', description: String(err), variant: 'danger' });
       }
     }
   }
@@ -87,37 +87,44 @@ export function RateTableForm({ open, onClose, rateTable }: RateTableFormProps) 
   return (
     <>
       <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>{isEditing ? 'Edit Rate Entry' : 'Add Rate Entry'}</DrawerTitle>
-          </DrawerHeader>
+        <DrawerContent
+          title={isEditing ? 'Edit Rate Entry' : 'Add Rate Entry'}
+          footer={
+            <>
+              <Button variant="ghost" onClick={onClose} disabled={isPending}>Cancel</Button>
+              <Button form="rate-table-form" type="submit" disabled={isPending}>
+                {isPending ? 'Saving…' : 'Save'}
+              </Button>
+            </>
+          }
+        >
           <form id="rate-table-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 px-6 py-4">
-            <FormField label="Carrier" error={errors.carrierId?.message} required>
+            <FormGroup label="Carrier" error={errors.carrierId?.message} required>
               <select {...register('carrierId')} className="field-select" disabled={isEditing}>
                 <option value="">Select carrier…</option>
                 {carriersPage?.content.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
-            </FormField>
-            <FormField label="Service Level" error={errors.serviceLevelId?.message} required>
+            </FormGroup>
+            <FormGroup label="Service Level" error={errors.serviceLevelId?.message} required>
               <select {...register('serviceLevelId')} className="field-select" disabled={isEditing || !selectedCarrierId}>
                 <option value="">Select service level…</option>
                 {serviceLevelsPage?.content.map((sl) => (
                   <option key={sl.id} value={sl.id}>{sl.name}</option>
                 ))}
               </select>
-            </FormField>
+            </FormGroup>
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Origin Zone" error={errors.originZone?.message} required>
+              <FormGroup label="Origin Zone" error={errors.originZone?.message} required>
                 <input {...register('originZone')} className="field-input" placeholder="e.g. 1" />
-              </FormField>
-              <FormField label="Dest Zone" error={errors.destZone?.message} required>
+              </FormGroup>
+              <FormGroup label="Dest Zone" error={errors.destZone?.message} required>
                 <input {...register('destZone')} className="field-input" placeholder="e.g. 4" />
-              </FormField>
+              </FormGroup>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Min Weight (lb)" error={errors.weightMinLb?.message} required>
+              <FormGroup label="Min Weight (lb)" error={errors.weightMinLb?.message} required>
                 <input
                   {...register('weightMinLb', { valueAsNumber: true })}
                   type="number"
@@ -125,8 +132,8 @@ export function RateTableForm({ open, onClose, rateTable }: RateTableFormProps) 
                   min={0}
                   className="field-input"
                 />
-              </FormField>
-              <FormField label="Max Weight (lb)" error={errors.weightMaxLb?.message} required>
+              </FormGroup>
+              <FormGroup label="Max Weight (lb)" error={errors.weightMaxLb?.message} required>
                 <input
                   {...register('weightMaxLb', { valueAsNumber: true })}
                   type="number"
@@ -134,9 +141,9 @@ export function RateTableForm({ open, onClose, rateTable }: RateTableFormProps) 
                   min={0}
                   className="field-input"
                 />
-              </FormField>
+              </FormGroup>
             </div>
-            <FormField label="Rate (cents)" error={errors.rateCents?.message} required>
+            <FormGroup label="Rate (cents)" error={errors.rateCents?.message} required>
               <input
                 {...register('rateCents', { valueAsNumber: true })}
                 type="number"
@@ -144,22 +151,16 @@ export function RateTableForm({ open, onClose, rateTable }: RateTableFormProps) 
                 className="field-input"
                 placeholder="e.g. 1250 = $12.50"
               />
-            </FormField>
+            </FormGroup>
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Effective Date" error={errors.effectiveDate?.message} required>
+              <FormGroup label="Effective Date" error={errors.effectiveDate?.message} required>
                 <input {...register('effectiveDate')} type="date" className="field-input" />
-              </FormField>
-              <FormField label="Expiry Date" error={errors.expiryDate?.message}>
+              </FormGroup>
+              <FormGroup label="Expiry Date" error={errors.expiryDate?.message}>
                 <input {...register('expiryDate')} type="date" className="field-input" />
-              </FormField>
+              </FormGroup>
             </div>
           </form>
-          <DrawerFooter>
-            <Button variant="ghost" onClick={onClose} disabled={isPending}>Cancel</Button>
-            <Button form="rate-table-form" type="submit" disabled={isPending}>
-              {isPending ? 'Saving…' : 'Save'}
-            </Button>
-          </DrawerFooter>
         </DrawerContent>
       </Drawer>
       <OptimisticLockDialog open={lockConflict} onReload={() => { setLockConflict(false); onClose(); }} />

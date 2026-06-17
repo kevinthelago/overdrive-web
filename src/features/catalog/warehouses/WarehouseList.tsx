@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { type ColumnDef } from '../../../components/ui/DataTable';
 import { Button } from '../../../components/ui/Button';
-import { useToast } from '../../../components/ui/Toast';
+import { useAppStore } from '../../../state/appStore';
 import { EntityList } from '../components/EntityList';
 import { DeleteDialog } from '../components/DeleteDialog';
 import { WarehouseForm } from './WarehouseForm';
@@ -10,7 +10,7 @@ import { ApiError } from '../../../lib/api/client';
 import type { Warehouse, WarehouseListParams, BlockedDeleteReference } from '../types';
 
 export function WarehouseList() {
-  const { toast } = useToast();
+  const addToast = useAppStore(state => state.addToast);
   const [params, setParams] = useState<WarehouseListParams>({ page: 0, size: 20, sort: 'name,asc' });
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
@@ -30,13 +30,14 @@ export function WarehouseList() {
     if (!deleteTarget) return;
     try {
       await deleteWarehouse.mutateAsync({ id: deleteTarget.id, version: deleteTarget.version });
-      toast({ title: `"${deleteTarget.name}" deleted.` });
+      addToast({ title: `"${deleteTarget.name}" deleted.`, variant: 'success' });
       closeDelete();
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setBlockedRefs((err.body as { references?: BlockedDeleteReference[] }).references ?? []);
+        const refs = (err.body as Record<string, unknown>).references as BlockedDeleteReference[] | undefined;
+        setBlockedRefs(refs ?? []);
       } else {
-        toast({ title: 'Delete failed', description: String(err), variant: 'destructive' });
+        addToast({ title: 'Delete failed', description: String(err), variant: 'danger' });
       }
     }
   }
@@ -47,21 +48,17 @@ export function WarehouseList() {
   }
 
   const columns: ColumnDef<Warehouse>[] = [
-    { accessorKey: 'code', header: 'Code' },
-    { accessorKey: 'name', header: 'Name' },
+    { key: 'code', header: 'Code', cell: (w) => w.code },
+    { key: 'name', header: 'Name', cell: (w) => w.name },
+    { key: 'location', header: 'Location', cell: (w) => `${w.city}, ${w.state} ${w.zip}` },
+    { key: 'active', header: 'Active', cell: (w) => (w.active ? 'Yes' : 'No') },
     {
-      id: 'location',
-      header: 'Location',
-      cell: ({ row }) => `${row.original.city}, ${row.original.state} ${row.original.zip}`,
-    },
-    { accessorKey: 'active', header: 'Active', cell: ({ row }) => (row.original.active ? 'Yes' : 'No') },
-    {
-      id: 'actions',
+      key: 'actions',
       header: '',
-      cell: ({ row }) => (
+      cell: (w) => (
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}>Edit</Button>
-          <Button variant="ghost" size="sm" onClick={() => openDelete(row.original)}>Delete</Button>
+          <Button variant="ghost" size="sm" onClick={() => openEdit(w)}>Edit</Button>
+          <Button variant="ghost" size="sm" onClick={() => openDelete(w)}>Delete</Button>
         </div>
       ),
     },

@@ -18,154 +18,113 @@ import type {
   RateTableListParams,
 } from './types';
 
-function toQueryString(params: object): string {
-  const entries = Object.entries(params as Record<string, unknown>).filter(
-    ([, v]) => v !== undefined && v !== null && v !== '',
-  );
-  if (entries.length === 0) return '';
-  return '?' + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
-}
+type QueryParams = Record<string, string | number | boolean | null | undefined>;
 
-function ifMatchHeaders(version: number): Record<string, string> {
+function ifMatch(version: number): Record<string, string> {
   return { 'If-Match': `"${version}"` };
 }
 
 // Products
 export function listProducts(params: ProductListParams): Promise<Page<Product>> {
-  return apiClient(`/api/catalog/products${toQueryString(params)}`);
+  return apiClient.get('/api/catalog/products', { params: params as QueryParams });
 }
 
 export function getProduct(id: string): Promise<Product> {
-  return apiClient(`/api/catalog/products/${id}`);
+  return apiClient.get(`/api/catalog/products/${id}`);
 }
 
 export function createProduct(data: ProductCreateRequest): Promise<Product> {
-  return apiClient('/api/catalog/products', { method: 'POST', body: JSON.stringify(data) });
+  return apiClient.post('/api/catalog/products', data);
 }
 
 export function updateProduct(id: string, data: ProductCreateRequest, version: number): Promise<Product> {
-  return apiClient(`/api/catalog/products/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-    headers: ifMatchHeaders(version),
-  });
+  return apiClient.put(`/api/catalog/products/${id}`, data, { headers: ifMatch(version) });
 }
 
 export function deleteProduct(id: string, version: number): Promise<void> {
-  return apiClient(`/api/catalog/products/${id}`, {
-    method: 'DELETE',
-    headers: ifMatchHeaders(version),
-  });
+  return apiClient.delete(`/api/catalog/products/${id}`, { headers: ifMatch(version) });
 }
 
 // Warehouses
 export function listWarehouses(params: WarehouseListParams): Promise<Page<Warehouse>> {
-  return apiClient(`/api/catalog/warehouses${toQueryString(params)}`);
+  return apiClient.get('/api/catalog/warehouses', { params: params as QueryParams });
 }
 
 export function getWarehouse(id: string): Promise<Warehouse> {
-  return apiClient(`/api/catalog/warehouses/${id}`);
+  return apiClient.get(`/api/catalog/warehouses/${id}`);
 }
 
 export function createWarehouse(data: WarehouseCreateRequest): Promise<Warehouse> {
-  return apiClient('/api/catalog/warehouses', { method: 'POST', body: JSON.stringify(data) });
+  return apiClient.post('/api/catalog/warehouses', data);
 }
 
 export function updateWarehouse(id: string, data: WarehouseCreateRequest, version: number): Promise<Warehouse> {
-  return apiClient(`/api/catalog/warehouses/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-    headers: ifMatchHeaders(version),
-  });
+  return apiClient.put(`/api/catalog/warehouses/${id}`, data, { headers: ifMatch(version) });
 }
 
 export function deleteWarehouse(id: string, version: number): Promise<void> {
-  return apiClient(`/api/catalog/warehouses/${id}`, {
-    method: 'DELETE',
-    headers: ifMatchHeaders(version),
-  });
+  return apiClient.delete(`/api/catalog/warehouses/${id}`, { headers: ifMatch(version) });
 }
 
 // Carriers
 export function listCarriers(params: CarrierListParams): Promise<Page<Carrier>> {
-  return apiClient(`/api/catalog/carriers${toQueryString(params)}`);
+  return apiClient.get('/api/catalog/carriers', { params: params as QueryParams });
 }
 
 export function getCarrier(id: string): Promise<Carrier> {
-  return apiClient(`/api/catalog/carriers/${id}`);
+  return apiClient.get(`/api/catalog/carriers/${id}`);
 }
 
 export function createCarrier(data: CarrierCreateRequest): Promise<Carrier> {
-  return apiClient('/api/catalog/carriers', { method: 'POST', body: JSON.stringify(data) });
+  return apiClient.post('/api/catalog/carriers', data);
 }
 
 export function updateCarrier(id: string, data: CarrierCreateRequest, version: number): Promise<Carrier> {
-  return apiClient(`/api/catalog/carriers/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-    headers: ifMatchHeaders(version),
-  });
+  return apiClient.put(`/api/catalog/carriers/${id}`, data, { headers: ifMatch(version) });
 }
 
 export function deleteCarrier(id: string, version: number): Promise<void> {
-  return apiClient(`/api/catalog/carriers/${id}`, {
-    method: 'DELETE',
-    headers: ifMatchHeaders(version),
-  });
+  return apiClient.delete(`/api/catalog/carriers/${id}`, { headers: ifMatch(version) });
 }
 
 // Service Levels
 export function listServiceLevels(params: ServiceLevelListParams): Promise<Page<ServiceLevel>> {
-  return apiClient(`/api/catalog/service-levels${toQueryString(params)}`);
+  return apiClient.get('/api/catalog/service-levels', { params: params as QueryParams });
 }
 
 export function getServiceLevel(id: string): Promise<ServiceLevel> {
-  return apiClient(`/api/catalog/service-levels/${id}`);
+  return apiClient.get(`/api/catalog/service-levels/${id}`);
 }
 
 export function createServiceLevel(data: ServiceLevelCreateRequest): Promise<ServiceLevel> {
-  return apiClient('/api/catalog/service-levels', { method: 'POST', body: JSON.stringify(data) });
+  return apiClient.post('/api/catalog/service-levels', data);
 }
 
 export function updateServiceLevel(id: string, data: ServiceLevelCreateRequest, version: number): Promise<ServiceLevel> {
-  return apiClient(`/api/catalog/service-levels/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-    headers: ifMatchHeaders(version),
-  });
+  return apiClient.put(`/api/catalog/service-levels/${id}`, data, { headers: ifMatch(version) });
 }
 
 export function deleteServiceLevel(id: string, version: number): Promise<void> {
-  return apiClient(`/api/catalog/service-levels/${id}`, {
-    method: 'DELETE',
-    headers: ifMatchHeaders(version),
-  });
+  return apiClient.delete(`/api/catalog/service-levels/${id}`, { headers: ifMatch(version) });
 }
 
 // Rate Tables
 export function listRateTables(params: RateTableListParams): Promise<Page<RateTable>> {
-  return apiClient(`/api/catalog/rate-tables${toQueryString(params)}`);
+  return apiClient.get('/api/catalog/rate-tables', { params: params as QueryParams });
 }
 
 export function getRateTable(id: string): Promise<RateTable> {
-  return apiClient(`/api/catalog/rate-tables/${id}`);
+  return apiClient.get(`/api/catalog/rate-tables/${id}`);
 }
 
 export function createRateTable(data: RateTableCreateRequest): Promise<RateTable> {
-  return apiClient('/api/catalog/rate-tables', { method: 'POST', body: JSON.stringify(data) });
+  return apiClient.post('/api/catalog/rate-tables', data);
 }
 
 export function updateRateTable(id: string, data: RateTableCreateRequest, version: number): Promise<RateTable> {
-  return apiClient(`/api/catalog/rate-tables/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-    headers: ifMatchHeaders(version),
-  });
+  return apiClient.put(`/api/catalog/rate-tables/${id}`, data, { headers: ifMatch(version) });
 }
 
 export function deleteRateTable(id: string, version: number): Promise<void> {
-  return apiClient(`/api/catalog/rate-tables/${id}`, {
-    method: 'DELETE',
-    headers: ifMatchHeaders(version),
-  });
+  return apiClient.delete(`/api/catalog/rate-tables/${id}`, { headers: ifMatch(version) });
 }

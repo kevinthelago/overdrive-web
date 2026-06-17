@@ -8,10 +8,21 @@ import { renderWithProviders } from '../setup';
 vi.mock('../../../../components/ui/Dialog', () => ({
   Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div role="dialog">{children}</div> : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogContent: ({
+    title,
+    children,
+    footer,
+  }: {
+    title?: string;
+    children: React.ReactNode;
+    footer?: React.ReactNode;
+  }) => (
+    <div>
+      {title && <h2>{title}</h2>}
+      {children}
+      {footer}
+    </div>
+  ),
 }));
 
 vi.mock('../../../../components/ui/Button', () => ({
@@ -32,8 +43,8 @@ vi.mock('../../../../components/ui/Button', () => ({
   ),
 }));
 
-vi.mock('../../../../components/ui/Badge', () => ({
-  Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+vi.mock('../../../../components/ui/Pill', () => ({
+  Pill: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
 
 describe('DeleteDialog', () => {

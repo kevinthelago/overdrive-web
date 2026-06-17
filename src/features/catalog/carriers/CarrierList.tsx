@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { type ColumnDef } from '../../../components/ui/DataTable';
 import { Button } from '../../../components/ui/Button';
-import { useToast } from '../../../components/ui/Toast';
+import { useAppStore } from '../../../state/appStore';
 import { EntityList } from '../components/EntityList';
 import { DeleteDialog } from '../components/DeleteDialog';
 import { CarrierForm } from './CarrierForm';
@@ -10,7 +10,7 @@ import { ApiError } from '../../../lib/api/client';
 import type { Carrier, CarrierListParams, BlockedDeleteReference } from '../types';
 
 export function CarrierList() {
-  const { toast } = useToast();
+  const addToast = useAppStore(state => state.addToast);
   const [params, setParams] = useState<CarrierListParams>({ page: 0, size: 20, sort: 'name,asc' });
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
@@ -30,13 +30,14 @@ export function CarrierList() {
     if (!deleteTarget) return;
     try {
       await deleteCarrier.mutateAsync({ id: deleteTarget.id, version: deleteTarget.version });
-      toast({ title: `"${deleteTarget.name}" deleted.` });
+      addToast({ title: `"${deleteTarget.name}" deleted.`, variant: 'success' });
       closeDelete();
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setBlockedRefs((err.body as { references?: BlockedDeleteReference[] }).references ?? []);
+        const refs = (err.body as Record<string, unknown>).references as BlockedDeleteReference[] | undefined;
+        setBlockedRefs(refs ?? []);
       } else {
-        toast({ title: 'Delete failed', description: String(err), variant: 'destructive' });
+        addToast({ title: 'Delete failed', description: String(err), variant: 'danger' });
       }
     }
   }
@@ -47,16 +48,16 @@ export function CarrierList() {
   }
 
   const columns: ColumnDef<Carrier>[] = [
-    { accessorKey: 'code', header: 'Code' },
-    { accessorKey: 'name', header: 'Name' },
-    { accessorKey: 'active', header: 'Active', cell: ({ row }) => (row.original.active ? 'Yes' : 'No') },
+    { key: 'code', header: 'Code', cell: (c) => c.code },
+    { key: 'name', header: 'Name', cell: (c) => c.name },
+    { key: 'active', header: 'Active', cell: (c) => (c.active ? 'Yes' : 'No') },
     {
-      id: 'actions',
+      key: 'actions',
       header: '',
-      cell: ({ row }) => (
+      cell: (c) => (
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}>Edit</Button>
-          <Button variant="ghost" size="sm" onClick={() => openDelete(row.original)}>Delete</Button>
+          <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>Edit</Button>
+          <Button variant="ghost" size="sm" onClick={() => openDelete(c)}>Delete</Button>
         </div>
       ),
     },

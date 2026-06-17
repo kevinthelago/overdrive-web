@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { type ColumnDef } from '../../../components/ui/DataTable';
 import { Button } from '../../../components/ui/Button';
-import { useToast } from '../../../components/ui/Toast';
+import { useAppStore } from '../../../state/appStore';
 import { EntityList } from '../components/EntityList';
 import { DeleteDialog } from '../components/DeleteDialog';
 import { ServiceLevelForm } from './ServiceLevelForm';
@@ -10,7 +10,7 @@ import { ApiError } from '../../../lib/api/client';
 import type { ServiceLevel, ServiceLevelListParams, BlockedDeleteReference } from '../types';
 
 export function ServiceLevelList() {
-  const { toast } = useToast();
+  const addToast = useAppStore(state => state.addToast);
   const [params, setParams] = useState<ServiceLevelListParams>({ page: 0, size: 20, sort: 'name,asc' });
   const [search, setSearch] = useState('');
   const [carrierFilter, setCarrierFilter] = useState('');
@@ -36,13 +36,14 @@ export function ServiceLevelList() {
     if (!deleteTarget) return;
     try {
       await deleteServiceLevel.mutateAsync({ id: deleteTarget.id, version: deleteTarget.version });
-      toast({ title: `"${deleteTarget.name}" deleted.` });
+      addToast({ title: `"${deleteTarget.name}" deleted.`, variant: 'success' });
       closeDelete();
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setBlockedRefs((err.body as { references?: BlockedDeleteReference[] }).references ?? []);
+        const refs = (err.body as Record<string, unknown>).references as BlockedDeleteReference[] | undefined;
+        setBlockedRefs(refs ?? []);
       } else {
-        toast({ title: 'Delete failed', description: String(err), variant: 'destructive' });
+        addToast({ title: 'Delete failed', description: String(err), variant: 'danger' });
       }
     }
   }
@@ -53,25 +54,24 @@ export function ServiceLevelList() {
   }
 
   const columns: ColumnDef<ServiceLevel>[] = [
-    { accessorKey: 'carrierName', header: 'Carrier' },
-    { accessorKey: 'code', header: 'Code' },
-    { accessorKey: 'name', header: 'Name' },
+    { key: 'carrierName', header: 'Carrier', cell: (sl) => sl.carrierName },
+    { key: 'code', header: 'Code', cell: (sl) => sl.code },
+    { key: 'name', header: 'Name', cell: (sl) => sl.name },
     {
-      id: 'transit',
+      key: 'transit',
       header: 'Transit Days',
-      cell: ({ row }) => {
-        const { minTransitDays, maxTransitDays } = row.original;
-        return minTransitDays === maxTransitDays ? `${minTransitDays}` : `${minTransitDays}–${maxTransitDays}`;
-      },
+      cell: (sl) => sl.minTransitDays === sl.maxTransitDays
+        ? `${sl.minTransitDays}`
+        : `${sl.minTransitDays}–${sl.maxTransitDays}`,
     },
-    { accessorKey: 'active', header: 'Active', cell: ({ row }) => (row.original.active ? 'Yes' : 'No') },
+    { key: 'active', header: 'Active', cell: (sl) => (sl.active ? 'Yes' : 'No') },
     {
-      id: 'actions',
+      key: 'actions',
       header: '',
-      cell: ({ row }) => (
+      cell: (sl) => (
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}>Edit</Button>
-          <Button variant="ghost" size="sm" onClick={() => openDelete(row.original)}>Delete</Button>
+          <Button variant="ghost" size="sm" onClick={() => openEdit(sl)}>Edit</Button>
+          <Button variant="ghost" size="sm" onClick={() => openDelete(sl)}>Delete</Button>
         </div>
       ),
     },

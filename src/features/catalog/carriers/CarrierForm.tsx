@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '../../../components/ui/Drawer';
+import { Drawer, DrawerContent } from '../../../components/ui/Drawer';
 import { Button } from '../../../components/ui/Button';
-import { FormField } from '../../../components/ui/FormField';
-import { useToast } from '../../../components/ui/Toast';
+import { FormGroup } from '../../../components/ui/FormField';
 import { OptimisticLockDialog } from '../components/OptimisticLockDialog';
 import { useCreateCarrier, useUpdateCarrier } from '../hooks';
 import { carrierSchema, type CarrierFormData } from '../schemas';
 import { ApiError } from '../../../lib/api/client';
+import { useAppStore } from '../../../state/appStore';
 import type { Carrier } from '../types';
 
 interface CarrierFormProps {
@@ -18,7 +18,7 @@ interface CarrierFormProps {
 }
 
 export function CarrierForm({ open, onClose, carrier }: CarrierFormProps) {
-  const { toast } = useToast();
+  const addToast = useAppStore(state => state.addToast);
   const [lockConflict, setLockConflict] = useState(false);
   const createCarrier = useCreateCarrier();
   const updateCarrier = useUpdateCarrier();
@@ -39,30 +39,30 @@ export function CarrierForm({ open, onClose, carrier }: CarrierFormProps) {
     try {
       if (isEditing) {
         await updateCarrier.mutateAsync({ id: carrier.id, data, version: carrier.version });
-        toast({ title: `"${data.name}" updated.` });
+        addToast({ title: `"${data.name}" updated.`, variant: 'success' });
       } else {
         await createCarrier.mutateAsync(data);
-        toast({ title: `"${data.name}" created.` });
+        addToast({ title: `"${data.name}" created.`, variant: 'success' });
       }
       onClose();
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 409 && (err.body as { type?: string }).type?.endsWith('optimistic-lock-conflict')) {
+        if (err.status === 409 && err.body.type.endsWith('optimistic-lock-conflict')) {
           setLockConflict(true);
           return;
         }
         if (err.status === 422 || err.status === 400) {
-          const problem = err.body as { fieldErrors?: Record<string, string> };
-          if (problem.fieldErrors) {
-            for (const [field, message] of Object.entries(problem.fieldErrors)) {
+          const fieldErrors = (err.body as Record<string, unknown>).fieldErrors as Record<string, string> | undefined;
+          if (fieldErrors) {
+            for (const [field, message] of Object.entries(fieldErrors)) {
               setError(field as keyof CarrierFormData, { message });
             }
             return;
           }
         }
-        toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
+        addToast({ title: 'Save failed', description: err.message, variant: 'danger' });
       } else {
-        toast({ title: 'Save failed', description: String(err), variant: 'destructive' });
+        addToast({ title: 'Save failed', description: String(err), variant: 'danger' });
       }
     }
   }
@@ -70,30 +70,31 @@ export function CarrierForm({ open, onClose, carrier }: CarrierFormProps) {
   return (
     <>
       <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>{isEditing ? 'Edit Carrier' : 'Add Carrier'}</DrawerTitle>
-          </DrawerHeader>
+        <DrawerContent
+          title={isEditing ? 'Edit Carrier' : 'Add Carrier'}
+          footer={
+            <>
+              <Button variant="ghost" onClick={onClose} disabled={isPending}>Cancel</Button>
+              <Button form="carrier-form" type="submit" disabled={isPending}>
+                {isPending ? 'Saving…' : 'Save'}
+              </Button>
+            </>
+          }
+        >
           <form id="carrier-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 px-6 py-4">
-            <FormField label="Code" error={errors.code?.message} required>
+            <FormGroup label="Code" error={errors.code?.message} required>
               <input {...register('code')} className="field-input" placeholder="e.g. FEDEX" />
-            </FormField>
-            <FormField label="Name" error={errors.name?.message} required>
+            </FormGroup>
+            <FormGroup label="Name" error={errors.name?.message} required>
               <input {...register('name')} className="field-input" placeholder="Carrier name" />
-            </FormField>
-            <FormField label="" error={undefined}>
+            </FormGroup>
+            <FormGroup label="" error={undefined}>
               <label className="flex items-center gap-2 text-sm text-white/80">
                 <input {...register('active')} type="checkbox" className="h-4 w-4 rounded" />
                 Active
               </label>
-            </FormField>
+            </FormGroup>
           </form>
-          <DrawerFooter>
-            <Button variant="ghost" onClick={onClose} disabled={isPending}>Cancel</Button>
-            <Button form="carrier-form" type="submit" disabled={isPending}>
-              {isPending ? 'Saving…' : 'Save'}
-            </Button>
-          </DrawerFooter>
         </DrawerContent>
       </Drawer>
       <OptimisticLockDialog open={lockConflict} onReload={() => { setLockConflict(false); onClose(); }} />
