@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { DeleteDialog } from '../../components/DeleteDialog';
 import { renderWithProviders } from '../setup';
 
-vi.mock('../../../components/ui/Dialog', () => ({
+vi.mock('../../../../components/ui/Dialog', () => ({
   Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div role="dialog">{children}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -14,7 +14,7 @@ vi.mock('../../../components/ui/Dialog', () => ({
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('../../../components/ui/Button', () => ({
+vi.mock('../../../../components/ui/Button', () => ({
   Button: ({
     children,
     onClick,
@@ -32,7 +32,7 @@ vi.mock('../../../components/ui/Button', () => ({
   ),
 }));
 
-vi.mock('../../../components/ui/Badge', () => ({
+vi.mock('../../../../components/ui/Badge', () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
 

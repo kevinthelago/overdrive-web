@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProductForm } from '../../products/ProductForm';
 import { renderWithProviders } from '../setup';
@@ -16,7 +16,7 @@ vi.mock('../../components/OptimisticLockDialog', () => ({
     open ? <div data-testid="lock-dialog">Lock conflict</div> : null,
 }));
 
-vi.mock('../../../components/ui/Drawer', () => ({
+vi.mock('../../../../components/ui/Drawer', () => ({
   Drawer: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div role="dialog">{children}</div> : null,
   DrawerContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -25,7 +25,7 @@ vi.mock('../../../components/ui/Drawer', () => ({
   DrawerFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('../../../components/ui/Button', () => ({
+vi.mock('../../../../components/ui/Button', () => ({
   Button: ({
     children,
     onClick,
@@ -45,7 +45,7 @@ vi.mock('../../../components/ui/Button', () => ({
   ),
 }));
 
-vi.mock('../../../components/ui/FormField', () => ({
+vi.mock('../../../../components/ui/FormField', () => ({
   FormField: ({
     label,
     error,
@@ -64,11 +64,11 @@ vi.mock('../../../components/ui/FormField', () => ({
   ),
 }));
 
-vi.mock('../../../components/ui/Toast', () => ({
+vi.mock('../../../../components/ui/Toast', () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
-vi.mock('../../../lib/api/client', () => ({
+vi.mock('../../../../lib/api/client', () => ({
   ApiError: class ApiError extends Error {
     status: number;
     body: unknown;
@@ -81,7 +81,7 @@ vi.mock('../../../lib/api/client', () => ({
 }));
 
 import { useCreateProduct, useUpdateProduct } from '../../hooks';
-import { ApiError } from '../../../lib/api/client';
+import { ApiError } from '../../../../lib/api/client';
 
 const mockProduct: Product = {
   id: 'p-1',
@@ -192,7 +192,8 @@ describe('ProductForm', () => {
     } as unknown as ReturnType<typeof useUpdateProduct>);
 
     renderWithProviders(<ProductForm open={true} onClose={vi.fn()} product={mockProduct} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await screen.findByDisplayValue('SKU-001');
+    fireEvent.submit(document.getElementById('product-form')!);
     await waitFor(() => expect(screen.getByTestId('lock-dialog')).toBeInTheDocument());
   });
 

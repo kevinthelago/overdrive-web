@@ -21,7 +21,7 @@ vi.mock('../../components/DeleteDialog', () => ({
     open ? <div data-testid="delete-dialog">Delete: {entityName}</div> : null,
 }));
 
-vi.mock('../../../components/ui/DataTable', () => ({
+vi.mock('../../../../components/ui/DataTable', () => ({
   DataTable: ({
     data,
     isLoading,
@@ -53,7 +53,7 @@ vi.mock('../../../components/ui/DataTable', () => ({
   },
 }));
 
-vi.mock('../../../components/ui/Button', () => ({
+vi.mock('../../../../components/ui/Button', () => ({
   Button: ({
     children,
     onClick,
@@ -65,15 +65,15 @@ vi.mock('../../../components/ui/Button', () => ({
   }) => <button onClick={onClick} disabled={disabled}>{children}</button>,
 }));
 
-vi.mock('../../../components/ui/Pill', () => ({
+vi.mock('../../../../components/ui/Pill', () => ({
   Pill: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
 
-vi.mock('../../../components/ui/Toast', () => ({
+vi.mock('../../../../components/ui/Toast', () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
-vi.mock('../../../lib/api/client', () => ({
+vi.mock('../../../../lib/api/client', () => ({
   ApiError: class ApiError extends Error {
     status: number;
     body: unknown;

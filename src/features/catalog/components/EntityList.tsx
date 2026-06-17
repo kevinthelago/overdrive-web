@@ -1,9 +1,9 @@
-import React, { type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/ui/DataTable';
 import { Button } from '../../../components/ui/Button';
 import type { Page } from '../types';
 
-interface EntityListProps<T> {
+interface EntityListProps<T extends object> {
   title: string;
   columns: ColumnDef<T>[];
   data: Page<T> | undefined;
@@ -17,7 +17,7 @@ interface EntityListProps<T> {
   addLabel: string;
 }
 
-export function EntityList<T>({
+export function EntityList<T extends object>({
   title,
   columns,
   data,

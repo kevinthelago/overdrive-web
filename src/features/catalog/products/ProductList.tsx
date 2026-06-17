@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { type ColumnDef } from '../../../components/ui/DataTable';
 import { Button } from '../../../components/ui/Button';
 import { Pill } from '../../../components/ui/Pill';
@@ -85,7 +85,7 @@ export function ProductList() {
     setParams((p) => ({ ...p, page: 0 }));
   }
 
-  function handleCategoryChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  function handleCategoryChange(e: ChangeEvent<HTMLSelectElement>) {
     setCategoryFilter(e.target.value as ProductCategory | '');
     setParams((p) => ({ ...p, page: 0 }));
   }

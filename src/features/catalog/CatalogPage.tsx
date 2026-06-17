@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
 
 const TABS = [

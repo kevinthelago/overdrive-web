@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { type ColumnDef } from '../../../components/ui/DataTable';
 import { Button } from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/Toast';
@@ -59,7 +59,7 @@ export function RateTableList() {
     setParams((p) => ({ ...p, page: 0 }));
   }
 
-  function handleCarrierChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  function handleCarrierChange(e: ChangeEvent<HTMLSelectElement>) {
     setCarrierFilter(e.target.value);
     setServiceLevelFilter('');
     setParams((p) => ({ ...p, page: 0 }));

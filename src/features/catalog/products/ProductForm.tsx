@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '../../../components/ui/Drawer';
@@ -171,7 +171,7 @@ export function ProductForm({ open, onClose, product }: ProductFormProps) {
 
             <FormField label="Declared Value ($)" error={errors.declaredValue?.message}>
               <input
-                {...register('declaredValue', { valueAsNumber: true })}
+                {...register('declaredValue', { setValueAs: (v: string) => v === '' ? undefined : parseFloat(v) })}
                 type="number"
                 step="0.01"
                 className="field-input"

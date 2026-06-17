@@ -6,7 +6,7 @@ import { EntityList } from '../../components/EntityList';
 import { renderWithProviders } from '../setup';
 import type { Page } from '../../types';
 
-vi.mock('../../../components/ui/DataTable', () => ({
+vi.mock('../../../../components/ui/DataTable', () => ({
   DataTable: ({ data, isLoading, emptyMessage }: { data: unknown[]; isLoading: boolean; emptyMessage: string }) => {
     if (isLoading) return <div>Loading…</div>;
     if (data.length === 0) return <div>{emptyMessage}</div>;
@@ -14,9 +14,19 @@ vi.mock('../../../components/ui/DataTable', () => ({
   },
 }));
 
-vi.mock('../../../components/ui/Button', () => ({
-  Button: ({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) => (
-    <button onClick={onClick} disabled={disabled}>{children}</button>
+vi.mock('../../../../components/ui/Button', () => ({
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    'aria-label': ariaLabel,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    disabled?: boolean;
+    'aria-label'?: string;
+  }) => (
+    <button onClick={onClick} disabled={disabled} aria-label={ariaLabel}>{children}</button>
   ),
 }));
 
