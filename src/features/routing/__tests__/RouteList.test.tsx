@@ -15,7 +15,7 @@ const defaultStore = {
 
 describe('RoutingInputs', () => {
   beforeEach(() => {
-    vi.mocked(appStore.useAppStore).mockReturnValue(defaultStore as any)
+    vi.mocked(appStore.useAppStore).mockReturnValue(defaultStore as unknown as ReturnType<typeof appStore.useAppStore>)
   })
 
   it('renders service level controls', () => {
@@ -36,7 +36,7 @@ describe('RoutingInputs', () => {
     vi.mocked(appStore.useAppStore).mockReturnValue({
       ...defaultStore,
       selectedProductId: null,
-    } as any)
+    } as unknown as ReturnType<typeof appStore.useAppStore>)
     render(<RoutingInputs onSolve={vi.fn()} loading={false} />)
     expect(screen.getByRole('button', { name: /solve/i })).toBeDisabled()
   })
